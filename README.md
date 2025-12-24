@@ -12,7 +12,9 @@
 | `packages/editor` | Web 编辑器：基于 core 的可视化编辑应用（`@agilejs/editor`） | React + Vite |
 | `packages/docs`   | 文档站点：用户文档/指南/示例                                | Docusaurus   |
 
-<video src="https://github.com/user-attachments/assets/1b5983a1-5a15-4ed8-8c7c-a56989b03076" muted autoplay loop playsinline width="100%" />
+<div>
+  <video src="https://github.com/user-attachments/assets/1b5983a1-5a15-4ed8-8c7c-a56989b03076" muted autoplay loop playsinline width="100%" />
+</div>
 
 ## 📁 项目结构（Monorepo）
 
