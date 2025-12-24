@@ -1,8 +1,7 @@
 <div align="center">
-  <img src="http://docs.antjob.ink/agile-ui/aLogo.svg" />
-  <h3>一个轻量级、零依赖的 Canvas 可视化引擎</h3>
+  <img src="https://docs.antjob.ink/agile-ui/aLogo.svg" />
+  <h2>一个轻量级、零依赖的 Canvas 可视化引擎</h2>
   <div style="font-size: 14px">AgileJS Graph 是一套基于 HTML Canvas 的图形编辑/渲染基础框架，采用「核心引擎 + 插件 + 渲染器」架构，并提供 Web 端可视化编辑器与文档站点。</div>
-  <video src="http://docs.antjob.ink/agile-ui/preview.mov" muted autoplay loop playsinline width="100%" />
 </div>
 
 ## 📚 Packages 一览
@@ -12,6 +11,8 @@
 | `packages/core`   | 画布引擎：数据模型、渲染器、交互插件等（`@agilejs/core`）   | TypeScript   |
 | `packages/editor` | Web 编辑器：基于 core 的可视化编辑应用（`@agilejs/editor`） | React + Vite |
 | `packages/docs`   | 文档站点：用户文档/指南/示例                                | Docusaurus   |
+
+<video src="https://github.com/user-attachments/assets/1b5983a1-5a15-4ed8-8c7c-a56989b03076" muted autoplay loop playsinline width="100%" />
 
 ## 📁 项目结构（Monorepo）
 
