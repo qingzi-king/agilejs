@@ -1,8 +1,8 @@
 <div align="center">
-  <img width="80px" src="https://agilejs.funenc.com/img/logo.svg" />
-<h4>一个轻量级、零依赖的 Canvas 可视化引擎</h4>
-<div style="font-size: 14px">AgileJS Graph 是一套基于 HTML Canvas 的图形编辑/渲染基础框架，采用「核心引擎 + 插件 + 渲染器」架构，并提供 Web 端可视化编辑器与文档站点。</div>
-<img src="http://docs.antjob.ink/agile-ui/preview.gif" />
+  <img src="http://docs.antjob.ink/agile-ui/aLogo.svg" />
+  <h3>一个轻量级、零依赖的 Canvas 可视化引擎</h3>
+  <div style="font-size: 14px">AgileJS Graph 是一套基于 HTML Canvas 的图形编辑/渲染基础框架，采用「核心引擎 + 插件 + 渲染器」架构，并提供 Web 端可视化编辑器与文档站点。</div>
+  <video src="http://docs.antjob.ink/agile-ui/preview.mov" muted autoplay loop playsinline width="100%" />
 </div>
 
 ## 📚 Packages 一览

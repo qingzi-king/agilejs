@@ -41,7 +41,7 @@ const config: Config = {
           // Please change this to your repo.
           // Remove this to remove the "edit this page" links.
           editUrl:
-            'https://github.com/qingzi-king/agilejs/agilejs/tree/main/packages/docs/',
+            'https://github.com/qingzi-king/agilejs/tree/main/packages/docs/',
         },
         blog: {
           showReadingTime: true,
@@ -124,7 +124,7 @@ const config: Config = {
         },
         {
           href: 'https://github.com/qingzi-king/agilejs',
-          label: 'CNB',
+          label: 'Github',
           position: 'right',
         },
       ],
@@ -153,7 +153,7 @@ const config: Config = {
           title: '社区',
           items: [
             {
-              label: 'CNB',
+              label: 'Github',
               href: 'https://github.com/qingzi-king/agilejs',
             },
             {
