@@ -1,0 +1,9 @@
+node_modules
+dist
+mock
+examples
+.vscode
+.DS_Store
+.idea
+.nvmrc
+deploy

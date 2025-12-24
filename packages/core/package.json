@@ -1,0 +1,25 @@
+{
+  "name": "@agilejs/core",
+  "version": "0.1.0",
+  "type": "module",
+  "engines": {
+    "node": ">=18.12.0"
+  },
+  "main": "src/index.ts",
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "npm run clean && tsc -p tsconfig.build.json",
+    "build-obfuscated": "npm run build && npm run obfuscate",
+    "clean": "rm -rf dist",
+    "dev": "tsc -p tsconfig.build.json --watch",
+    "obfuscate": "javascript-obfuscator dist --output dist --compact true --control-flow-flattening true --dead-code-injection true --dead-code-injection-threshold 0.05 --identifiers-prefix ag_ --rename-globals false --rename-properties false --self-defending true --string-array true --string-array-threshold 0.75",
+    "format": "pnpm -w exec prettier -w \"**/*.{ts,tsx,js,jsx,json,md,mdx,yml,yaml}\" --ignore-path ../../.prettierignore",
+    "format:check": "pnpm -w exec prettier -c \"**/*.{ts,tsx,js,jsx,json,md,mdx,yml,yaml}\" --ignore-path ../../.prettierignore"
+  },
+  "devDependencies": {
+    "typescript": "^5.5.4",
+    "javascript-obfuscator": "^4.1.0"
+  }
+}

@@ -1,0 +1,126 @@
+/**
+ * CSS files with the .module.css suffix will be treated as CSS modules
+ * and scoped locally.
+ */
+
+.heroBanner {
+  padding: 5rem 0;
+  text-align: center;
+  position: relative;
+  overflow: hidden;
+  background: radial-gradient(circle at 18% 20%, #3f68ff 0%, #0d40d8 45%, #002ca8 100%);
+}
+
+/* 背景装饰层 */
+.heroBg {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0.6;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.bgShape1 {
+  position: absolute;
+  top: 10%;
+  right: 8%;
+  width: 300px;
+  height: 250px;
+  animation: float 8s ease-in-out infinite;
+  opacity: 1;
+}
+
+.bgShape2 {
+  position: absolute;
+  bottom: 12%;
+  left: 5%;
+  width: 300px;
+  height: 250px;
+  animation: float 10s ease-in-out infinite reverse;
+  opacity: 1;
+}
+
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0px) rotate(0deg);
+  }
+  50% {
+    transform: translateY(-20px) rotate(5deg);
+  }
+}
+
+@media screen and (max-width: 996px) {
+  .heroBanner {
+    padding: 2rem;
+  }
+  .bgShape1, .bgShape2 {
+    width: 120px;
+    height: 120px;
+  }
+}
+
+.buttons {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.dButtonBlue {
+  background: #0c2eb9;
+  border-color: #1f05e3;
+  color: #FFF;
+}
+.dButtonBlue:hover {
+  background: #1677FF;
+  border-color: #1677FF;
+}
+
+.dButtonBlueLight {
+  background: #166fe0;
+  border-color: #055ed3;
+  color: #FFF;
+}
+.dButtonBlueLight:hover {
+  background: #055ed3;
+  border-color: #055ed3;
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 12px 28px;
+  border-radius: 10px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  border: 0;
+  outline: 0;
+  user-select: none;
+  text-decoration: none;
+  transition: transform .18s, box-shadow .18s, opacity .18s, background .18s;
+}
+
+.btnPrimary {
+  color: #fff;
+  background: linear-gradient(90deg, #5289ff, #1e5bff);
+  box-shadow: 0 10px 30px rgba(30,91,255,0.22);
+}
+.btnPrimary:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 18px 42px rgba(30,91,255,0.32);
+}
+
+.btnGhost {
+  color: rgba(255,255,255,0.96);
+  background: rgba(255,255,255,0.06);
+  border: 1.6px solid rgba(255,255,255,0.14);
+  backdrop-filter: blur(6px);
+}
+.btnGhost:hover {
+  background: rgba(255,255,255,0.11);
+  transform: translateY(-2px);
+}

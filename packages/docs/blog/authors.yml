@@ -1,0 +1,11 @@
+carkings:
+  name: qingzi.wang
+  title: Funenc Development Engineer
+  url: https://www.funenc.com
+  image_url: https://docs.cq-tct.com/funenc/agilejs/carkings.png
+  page: true
+    # customize the url of the author page at /blog/authors/<permalink>
+    # permalink: '/all-sebastien-lorber-articles'
+  socials:
+    github: qingzi-king
+    newsletter: https://www.funenc.com

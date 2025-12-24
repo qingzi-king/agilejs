@@ -1,0 +1,24 @@
+{
+  "name": "agilejs",
+  "private": true,
+  "version": "1.0.0",
+  "license": "MIT",
+  "engines": {
+    "node": ">=18.12.0",
+    "pnpm": ">=10.0.0"
+  },
+  "devDependencies": {
+    "prettier": "3.7.4"
+  },
+  "scripts": {
+    "dev": "pnpm -r run dev",
+    "build": "pnpm -r run build",
+    "lint": "eslint . --ext .js,.ts,.tsx",
+    "format:core": "prettier -w \"packages/core/**/*.{ts,tsx,js,jsx,json,md,mdx,yml,yaml}\"",
+    "format:editor": "prettier -w \"packages/editor/**/*.{ts,tsx,js,jsx,json,css,scss,md,mdx,yml,yaml}\"",
+    "format": "pnpm run format:core && pnpm run format:editor",
+    "format:check:core": "prettier -c \"packages/core/**/*.{ts,tsx,js,jsx,json,md,mdx,yml,yaml}\"",
+    "format:check:editor": "prettier -c \"packages/editor/**/*.{ts,tsx,js,jsx,json,css,scss,md,mdx,yml,yaml}\"",
+    "format:check": "pnpm run format:check:core && pnpm run format:check:editor"
+  }
+}

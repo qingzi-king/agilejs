@@ -1,0 +1,29 @@
+server {
+  listen 80 ;
+  server_name localhost;
+
+  root /app/build;
+  index index.html;
+
+  # 静态资源直接返回
+  location / {
+    try_files $uri $uri/ /index.html;
+  }
+
+  # sitemap、robots 强制从根目录
+  location = /sitemap.xml {
+    try_files $uri =404;
+  }
+
+  location = /robots.txt {
+    try_files $uri =404;
+  }
+
+  gzip on;
+  gzip_min_length 1k;
+  gzip_buffers 4 16k;
+  gzip_comp_level 5;
+  gzip_types text/plain application/javascript application/x-javascript text/css application/xml text/javascript application/x-httpd-php;
+  gzip_vary on;
+  gzip_static on;
+}

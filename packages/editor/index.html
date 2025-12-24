@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <link rel="icon" type="image/svg+xml" href="/src/assets/images/favicon.ico" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Agile Graph Editor - Funenc</title>
+  <style>
+    html,
+    body {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+    }
+
+    #root {
+      min-height: 100px;
+    }
+
+    /* 全局加载遮罩 */
+    #d-app-loading-mask {
+      position: fixed;
+      top: 0;
+      left: 0;
+      z-index: 9;
+      width: 100%;
+      height: 100%;
+      background: rgba(255, 255, 255, .8);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      color: rgba(0, 0, 0, .3);
+      font-size: 20px;
+    }
+    .d-app-loading-container {
+      text-align: center;
+    }
+    .d-app-loader-inner {
+      bottom: 0;
+      height: 60px;
+      left: 0;
+      margin: auto;
+      position: relative;
+      right: 0;
+      top: -50px;
+      width: 100px;
+      opacity: .9;
+    }
+    .d-app-loader-line-wrap {
+      animation: d-spin 1000ms cubic-bezier(.175, .885, .32, 1.275) infinite;
+      box-sizing: border-box;
+      height: 50px;
+      left: 0;
+      overflow: hidden;
+      position: absolute;
+      top: 0;
+      transform-origin: 50% 100%;
+      width: 100px;
+    }
+    .d-app-loader-line {
+      border: 4px solid transparent;
+      border-radius: 100%;
+      box-sizing: border-box;
+      height: 100px;
+      left: 0;
+      margin: 0 auto;
+      position: absolute;
+      right: 0;
+      top: 0;
+      width: 100px;
+    }
+    .d-app-loader-line-wrap:nth-child(1) {
+      animation-delay: -50ms;
+    }
+    .d-app-loader-line-wrap:nth-child(2) {
+      animation-delay: -100ms;
+    }
+    .d-app-loader-line-wrap:nth-child(3) {
+      animation-delay: -150ms;
+    }
+    .d-app-loader-line-wrap:nth-child(4) {
+      animation-delay: -200ms;
+    }
+    .d-app-loader-line-wrap:nth-child(5) {
+      animation-delay: -250ms;
+    }
+    .d-app-loader-line-wrap:nth-child(1) .d-app-loader-line {
+      border-color: hsl(0, 80%, 60%);
+      height: 90px;
+      width: 90px;
+      top: 7px;
+    }
+    .d-app-loader-line-wrap:nth-child(2) .d-app-loader-line {
+      border-color: hsl(60, 80%, 60%);
+      height: 76px;
+      width: 76px;
+      top: 14px;
+    }
+    .d-app-loader-line-wrap:nth-child(3) .d-app-loader-line {
+      border-color: hsl(120, 80%, 60%);
+      height: 62px;
+      width: 62px;
+      top: 21px;
+    }
+    .d-app-loader-line-wrap:nth-child(4) .d-app-loader-line {
+      border-color: hsl(180, 80%, 60%);
+      height: 48px;
+      width: 48px;
+      top: 28px;
+    }
+    .d-app-loader-line-wrap:nth-child(5) .d-app-loader-line {
+      border-color: hsl(240, 80%, 60%);
+      height: 34px;
+      width: 34px;
+      top: 35px;
+    }
+    @keyframes d-spin {
+      0%,
+      15% {
+        transform: rotate(0);
+      }
+      100% {
+        transform: rotate(360deg);
+      }
+    }
+    /* 全局加载遮罩结束 */
+  </style>
+</head>
+
+<body>
+  <div id="root"></div>
+  <div id="d-app-loading-mask">
+    <div class='d-app-loading-container'>
+      <div class="d-app-loader-inner">
+        <div class="d-app-loader-line-wrap">
+          <div class="d-app-loader-line"></div>
+        </div>
+        <div class="d-app-loader-line-wrap">
+          <div class="d-app-loader-line"></div>
+        </div>
+        <div class="d-app-loader-line-wrap">
+          <div class="d-app-loader-line"></div>
+        </div>
+        <div class="d-app-loader-line-wrap">
+          <div class="d-app-loader-line"></div>
+        </div>
+        <div class="d-app-loader-line-wrap">
+          <div class="d-app-loader-line"></div>
+        </div>
+      </div>
+      <div>科技向善，数据为先</div>
+    </div>
+  </div>
+  <script type="module" src="/src/main.tsx"></script>
+</body>
+
+</html>

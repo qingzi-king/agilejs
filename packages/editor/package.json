@@ -1,0 +1,70 @@
+{
+  "name": "@agilejs/editor",
+  "description": "AgileJS Web 编辑器",
+  "author": "qingzi.wang",
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite serve --mode development",
+    "pro": "vite build --mode production",
+    "deploy": "vite build --mode production && ./deploy/production.sh",
+    "serve": "vite preview",
+    "lint": "eslint --ext .js,.jsx,.ts,.tsx --fix --quiet src/",
+    "format": "pnpm -w exec prettier -w \"**/*.{ts,tsx,js,jsx,json,css,scss,md,mdx,yml,yaml}\" --ignore-path ../../.prettierignore",
+    "format:check": "pnpm -w exec prettier -c \"**/*.{ts,tsx,js,jsx,json,css,scss,md,mdx,yml,yaml}\" --ignore-path ../../.prettierignore",
+    "preview": "vite preview",
+    "prepare": "husky install",
+    "pre-commit": "lint-staged"
+  },
+  "dependencies": {
+    "@agilejs/core": "workspace:*",
+    "ace-builds": "^1.43.4",
+    "lodash": "^4.17.21",
+    "react": "19.2.0",
+    "react-ace": "^14.0.1",
+    "react-color": "^2.19.3",
+    "react-dom": "19.2.0",
+    "react-router-dom": "7.5.2",
+    "tailwindcss": "^4.1.4",
+    "zustand": "5.0.3"
+  },
+  "devDependencies": {
+    "@commitlint/cli": "18.6.0",
+    "@commitlint/config-conventional": "18.6.0",
+    "@eslint/js": "^9.25.1",
+    "@tailwindcss/postcss": "^4.1.4",
+    "@tailwindcss/vite": "^4.1.4",
+    "@types/node": "20.11.16",
+    "@types/react": "19.1.2",
+    "@types/react-color": "^3.0.13",
+    "@types/react-dom": "19.1.2",
+    "@typescript-eslint/eslint-plugin": "8.31.0",
+    "@typescript-eslint/parser": "8.31.0",
+    "@vitejs/plugin-react": "4.4.1",
+    "autoprefixer": "^10.4.21",
+    "eslint": "9.25.1",
+    "eslint-config-prettier": "10.1.2",
+    "eslint-plugin-prettier": "5.2.6",
+    "eslint-plugin-react": "7.37.5",
+    "eslint-plugin-react-hooks": "^5.2.0",
+    "eslint-plugin-react-refresh": "^0.4.20",
+    "globals": "^16.0.0",
+    "husky": "9.1.7",
+    "less": "4.2.0",
+    "less-loader": "12.2.0",
+    "lint-staged": "15.2.1",
+    "postcss": "8.4.29",
+    "prettier": "3.7.4",
+    "typescript": "5.8.3",
+    "typescript-eslint": "^8.31.0",
+    "vite": "7.2.0"
+  },
+  "lint-staged": {
+    "*.{js,jsx,tsx,ts}": [
+      "npm run lint"
+    ]
+  },
+  "engines": {
+    "node": ">=18.12.0"
+  }
+}

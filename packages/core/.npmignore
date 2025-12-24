@@ -1,0 +1,17 @@
+# 不要把源码发出去
+src/
+tsconfig.json
+tests/
+__tests__/
+*.log
+
+# 忽略开发工具文件
+.vscode/
+.eslint*
+.prettier*
+
+# 忽略构建脚本
+rollup.config.js
+vite.config.ts
+
+# 留下 README / LICENSE / dist
