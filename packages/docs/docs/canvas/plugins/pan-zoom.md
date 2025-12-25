@@ -11,7 +11,8 @@ const engine = new CanvasEngine({
   container: document.getElementById('canvas-container')!,
 });
 
-engine.plugins.use(new PanZoomPlugin());
+// 实例化插件并设置缩放比例（0.1为步长10%）
+engine.plugins.use(new PanZoomPlugin({ wheelZoomStep: 0.1 }));
 engine.start();
 ```
 

@@ -2,16 +2,22 @@
  * @Description: 平移缩放插件（支持鼠标和触摸）
  * @Author: qingzi.wang
  * @Date: 2025-09-16 18:25:05
- * @LastEditTime: 2025-11-18
+ * @LastEditTime: 2025-12-25 15:33:34
  */
 import type { CanvasEngine } from "../core/CanvasEngine";
 import { Plugin } from "./Plugin";
 import { hitTestNodes } from "../utils/hittest";
 import { PointerEventAdapter } from "../utils/pointer";
 
+export interface PanZoomPluginOptions {
+  /** 鼠标滚轮缩放步长（百分比），例如 0.1 表示每次缩放 10% */
+  wheelZoomStep?: number;
+}
+
 export class PanZoomPlugin implements Plugin {
   readonly id = "pan-zoom";
   private engine!: CanvasEngine;
+  private opts: Required<PanZoomPluginOptions>;
   private panning = false;
   private startX = 0;
   private startY = 0;
@@ -24,6 +30,15 @@ export class PanZoomPlugin implements Plugin {
   private initialScale = 1;
   private pinchCenterX = 0;
   private pinchCenterY = 0;
+
+  constructor(options: PanZoomPluginOptions = {}) {
+    const step = typeof options.wheelZoomStep === "number" ? options.wheelZoomStep : 0.1;
+    // 兜底：避免 0 或负数导致无法缩放；避免 >=1 造成反向/归零等异常
+    const safeStep = Math.min(0.95, Math.max(0.01, step));
+    this.opts = {
+      wheelZoomStep: safeStep,
+    };
+  }
 
   setup(engine: CanvasEngine): void {
     this.engine = engine;
@@ -108,8 +123,9 @@ export class PanZoomPlugin implements Plugin {
     const rect = this.engine.canvas.getBoundingClientRect();
     const x = e.clientX - rect.left;
     const y = e.clientY - rect.top;
-    // 将默认缩放步长调整为 5%
-    const factor = e.deltaY < 0 ? 1.05 : 0.95;
+    // 默认缩放步长 10%，可在初始化插件时配置
+    const step = this.opts.wheelZoomStep;
+    const factor = e.deltaY < 0 ? 1 + step : 1 - step;
     this.engine.zoomAt(factor, x, y);
   };
 
