@@ -6,7 +6,6 @@
  */
 import type { CanvasEngine } from "../core/CanvasEngine";
 import { Plugin } from "./Plugin";
-import { hitTestNodes } from "../utils/hittest";
 
 export interface DataTooltipOptions {
   delayMs?: number; // 悬停延时
@@ -47,6 +46,11 @@ export class DataTooltipPlugin implements Plugin {
     c.addEventListener("mouseleave", this.onMouseLeave, { capture: true });
   }
 
+  private requestRender(): void {
+    // CanvasEngine 使用按需渲染：tooltip 的显示/位置更新必须显式请求下一帧
+    this.engine.requestRender();
+  }
+
   dispose(): void {
     const c = this.engine.canvas;
     c.removeEventListener("mousemove", this.onMouseMove, { capture: true } as any);
@@ -56,13 +60,15 @@ export class DataTooltipPlugin implements Plugin {
 
   private onMouseMove = (e: MouseEvent) => {
     if (this.engine.getMode() !== "edit") {
+      const wasShowing = this.show;
       this.hide();
+      if (wasShowing) this.requestRender();
       return;
     }
     const rect = this.engine.canvas.getBoundingClientRect();
     const screen = { x: e.clientX - rect.left, y: e.clientY - rect.top };
     const world = this.engine.toWorld(screen);
-    const node = hitTestNodes(world, this.engine.graph.getNodes(), {
+    const node = this.engine.pickNodeAtWorld(world as any, {
       scale: this.engine.getScale(),
       pixelThresholdPx: this.opts.pixelThresholdPx,
     });
@@ -79,13 +85,16 @@ export class DataTooltipPlugin implements Plugin {
     ) {
       // 无目标或无自定义数据 -> 隐藏
       this.pendingNodeId = null;
+      const wasShowing = this.show;
       if (this.currentNodeId !== null) this.hide();
       this.clearTimer();
+      if (wasShowing) this.requestRender();
       return;
     }
 
     if (node.id === this.currentNodeId && this.show) {
       // 已显示当前节点的数据，仅更新位置即可
+      this.requestRender();
       return;
     }
 
@@ -98,12 +107,16 @@ export class DataTooltipPlugin implements Plugin {
       this.currentNodeId = node.id;
       this.lines = this.formatCustom(custom);
       this.show = this.lines.length > 0;
+      // 鼠标停住不动时也要能显示 tooltip：请求下一帧重绘
+      this.requestRender();
     }, this.opts.delayMs);
   };
 
   private onMouseLeave = () => {
+    const wasShowing = this.show;
     this.hide();
     this.clearTimer();
+    if (wasShowing) this.requestRender();
   };
 
   private hide() {

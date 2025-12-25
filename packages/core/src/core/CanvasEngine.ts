@@ -13,6 +13,8 @@ import { AnimationManager } from "./Animation";
 import { THEME_PALETTES, CoreThemeName, mergePalette } from "./Themes";
 import { buildQuadtreeFromNodes, Quadtree } from "../utils/quadtree";
 import { PerformanceMonitor, PerformanceStats } from "./PerformanceMonitor";
+import { hitTestNode } from "../utils/hittest";
+import type { NodeData, Point } from "../model/Graph";
 
 export interface EngineEvents {
   "engine:tick": { time: number };
@@ -239,6 +241,13 @@ export class CanvasEngine {
   private _visibleNodesCache: import("../model/Graph").NodeData[] = [];
   private _visibleNodeIds = new Set<string>();
   private _qtResultCache: Array<{
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+    data: import("../model/Graph").NodeData;
+  }> = [];
+  private _qtPickCache: Array<{
     x: number;
     y: number;
     width: number;
@@ -1203,6 +1212,58 @@ export class CanvasEngine {
    */
   requestRender(): void {
     this._needsRender = true;
+  }
+
+  /**
+   * 基于空间索引（四叉树）的节点拾取：用于 hover/tooltip 等高频交互，避免每次全量遍历所有节点。
+   * - 返回“最上层”节点（按 zIndex、id 规则）
+   * - 若空间索引不可用，则回退到从后往前扫描 graph.getNodes()
+   */
+  pickNodeAtWorld(
+    pointWorld: Point,
+    opts: { scale?: number; pixelThresholdPx?: number } = {},
+  ): NodeData | undefined {
+    const scale = Math.max(0.0001, opts.scale ?? this.getScale());
+    const pixelThresholdPx = opts.pixelThresholdPx ?? 10;
+    const thWorld = pixelThresholdPx / scale;
+
+    // 以点为中心做一个很小的查询矩形；四叉树存的是节点 AABB，命中候选集通常很小
+    const range = { x: pointWorld.x - thWorld, y: pointWorld.y - thWorld, width: thWorld * 2, height: thWorld * 2 };
+
+    const canUseSpatial = this.spatialEnabled && !(this.spatialDisableDuringDrag && this.isDraggingNodes);
+    if (canUseSpatial) this.rebuildSpatialIndexIfNeeded();
+
+    let best: NodeData | undefined;
+    const better = (a: NodeData, b: NodeData) => {
+      const az = a.zIndex ?? 0;
+      const bz = b.zIndex ?? 0;
+      if (az !== bz) return az > bz;
+      // Graph.getNodes 是 zIndex 升序、id 升序；“最上层”是末尾 => id 更大的优先
+      return a.id.localeCompare(b.id) > 0;
+    };
+
+    if (canUseSpatial && this.qt) {
+      this._qtPickCache.length = 0;
+      this.qt.query(range, this._qtPickCache);
+      for (let i = 0; i < this._qtPickCache.length; i++) {
+        const n = this._qtPickCache[i]!.data as any;
+        if (n.visible === false) continue;
+        if (n.selectable === false) continue;
+        if (!hitTestNode(pointWorld, n, { scale, pixelThresholdPx })) continue;
+        if (!best || better(n, best)) best = n;
+      }
+      return best;
+    }
+
+    // 回退：从后往前扫描（已按 zIndex/id 排序且缓存），仍然是 O(n)，但没有额外的复制+排序开销
+    const nodes = this.graph.getNodes();
+    for (let i = nodes.length - 1; i >= 0; i--) {
+      const n: any = nodes[i];
+      if (n.visible === false) continue;
+      if (n.selectable === false) continue;
+      if (hitTestNode(pointWorld, n, { scale, pixelThresholdPx })) return n;
+    }
+    return undefined;
   }
 
   // 快照模式切换
