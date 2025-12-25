@@ -71,6 +71,15 @@ const engine = new CanvasEngine({
     totalNodes: 5000,   // 激进降质节点总数阈值
     totalEdges: 10000   // 激进降质边总数阈值
   },
+
+  // DPR 动态降级配置（Retina 屏幕交互性能优化）
+  // 在高 DPR 设备上，平移/拖拽等高频交互时降低渲染分辨率以提升流畅度
+  dprDegradation: {
+    enabled: true,      // 是否启用（默认 true）
+    threshold: 1.5,     // 触发阈值：原生 DPR > threshold 才会降级（默认 1.5）
+    panTarget: 1.5,     // 平移时目标 DPR（默认 1.5，兼顾清晰度）
+    dragTarget: 1        // 拖拽节点时目标 DPR（默认 1，优先流畅）
+  },
   
   // 空间索引配置
   spatialIndex: {
@@ -261,6 +270,50 @@ const engine = new CanvasEngine({
   }
 });
 ```
+
+### dprDegradation
+
+**类型**: `DprDegradationConfig`  
+**可选**: 是  
+**默认值**: `{ enabled: true, threshold: 1.5, panTarget: 1.5, dragTarget: 1 }`
+
+在高 DPR 设备（如 Retina 屏幕，`window.devicePixelRatio` 通常为 2）上，Canvas 的实际渲染像素会按 `dpr²` 增长（例如 DPR=2 时像素数约为 4 倍）。
+
+`dprDegradation` 用于在**平移画布**或**拖拽节点**等高频交互期间临时降低渲染 DPR，以显著降低每帧重绘开销，提升交互流畅度；交互结束后会恢复到原生 DPR。
+
+```typescript
+interface DprDegradationConfig {
+  /** 是否启用 DPR 降级（默认 true） */
+  enabled?: boolean;
+  /** 触发降级的 DPR 阈值：原生 DPR <= threshold 时不降级（默认 1.5） */
+  threshold?: number;
+  /** 平移画布时的目标 DPR（默认 1.5，优先清晰度） */
+  panTarget?: number;
+  /** 拖拽节点时的目标 DPR（默认 1，优先流畅度） */
+  dragTarget?: number;
+}
+```
+
+示例：在 Retina 屏幕上更激进地提升交互性能
+
+```typescript
+const engine = new CanvasEngine({
+  container,
+  dprDegradation: {
+    enabled: true,
+    threshold: 1.5,
+    panTarget: 1,  // 平移也用 1（更流畅，但更模糊）
+    dragTarget: 1
+  }
+});
+```
+
+注意事项：
+
+1. `panTarget`/`dragTarget` 会自动被限制为不超过原生 DPR（例如原生 DPR=2，目标设为 3 也只会按 2 生效）。
+2. 降级期间画面可能会略微变糊，这是以清晰度换取帧率的权衡；建议 `panTarget` 保持在 `1~1.5` 区间。
+3. 如果你的场景强调截图/导出清晰度，建议保持 `enabled: true`，交互结束后会自动恢复原生 DPR。
+
 
 ### 性能优化配置
 
@@ -689,3 +742,19 @@ const viewer = new CanvasEngine({
 2. 启用激进降质
 3. 优化空间索引配置
 4. 使用 `edgeSnapshot: 'always'` 固定边快照
+
+### Q: Retina 屏幕拖拽/平移卡顿怎么办？
+
+可以启用（或调整）`dprDegradation`，在交互期间降低渲染 DPR：
+
+```typescript
+const engine = new CanvasEngine({
+  container,
+  dprDegradation: {
+    enabled: true,
+    threshold: 1.5,
+    panTarget: 1.5,
+    dragTarget: 1
+  }
+});
+```
