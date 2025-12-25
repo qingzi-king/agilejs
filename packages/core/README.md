@@ -1,6 +1,6 @@
 # Agilejs Core
 
-AgileJS Graph：一个基于 HTML Canvas 的轻量图形编辑/渲染基础骨架，支持插件化与自定义渲染器。
+一个轻量级、零依赖的 Canvas 可视化引擎，支持插件化与自定义渲染器。
 
 ## 开发
 
