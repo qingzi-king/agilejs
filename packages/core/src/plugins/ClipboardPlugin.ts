@@ -2,7 +2,7 @@
  * @Description: 剪贴板插件
  * @Author: qingzi.wang
  * @Date: 2025-09-16 18:25:05
- * @LastEditTime: 2025-11-22 22:42:57
+ * @LastEditTime: 2025-12-25 20:12:04
  */
 import type { CanvasEngine } from "../core/CanvasEngine";
 import { Plugin } from "./Plugin";
@@ -60,6 +60,10 @@ const DEFAULT_IMAGE_CONFIG: Required<ImagePasteConfig> = {
   qualityStep: 0.1,
 };
 
+const NODE_CLIPBOARD_MIME = "application/x-agilejs-graph";
+const NODE_CLIPBOARD_TEXT_PREFIX = "AGILEJS_GRAPH:";
+const NODE_CLIPBOARD_HTML_MARKER_PREFIX = "AGILEJS_GRAPH_HTML:";
+
 export class ClipboardPlugin implements Plugin {
   readonly id = "clipboard";
   private engine!: CanvasEngine;
@@ -68,8 +72,6 @@ export class ClipboardPlugin implements Plugin {
   // 仅当画布被"聚焦/激活"时才响应复制/粘贴（避免属性面板等输入框触发画布粘贴）
   private canvasActive = false;
   private offList: Array<() => void> = [];
-  // 标记是否刚刚通过快捷键粘贴了节点，用于避免 paste 事件重复处理
-  private justPastedNode = false;
 
   constructor(config?: ImagePasteConfig) {
     this.imageConfig = { ...DEFAULT_IMAGE_CONFIG, ...config };
@@ -79,6 +81,9 @@ export class ClipboardPlugin implements Plugin {
     this.engine = engine;
     // 键盘事件：全局监听，但只在 canvasActive 且非输入场景下生效
     window.addEventListener("keydown", this.onKeyDown, true);
+    // 复制/剪切事件：将画布节点写入系统剪贴板，实现“最后复制哪个就粘贴哪个”
+    window.addEventListener("copy", this.onCopy, true);
+    window.addEventListener("cut", this.onCut, true);
     // 粘贴事件：监听剪贴板粘贴（支持图片）
     window.addEventListener("paste", this.onPaste, true);
     // 指针按下：基于事件路径判断是否点击在画布内，从而更新 canvasActive
@@ -97,6 +102,8 @@ export class ClipboardPlugin implements Plugin {
 
   dispose(): void {
     window.removeEventListener("keydown", this.onKeyDown, true);
+    window.removeEventListener("copy", this.onCopy, true);
+    window.removeEventListener("cut", this.onCut, true);
     window.removeEventListener("paste", this.onPaste, true);
     if (this.offList.length) {
       for (const off of this.offList) {
@@ -114,119 +121,215 @@ export class ClipboardPlugin implements Plugin {
     // 仅当画布被激活（最近一次指针按下发生在画布上）时，才处理 Cmd/Ctrl+C/V
     if (!this.canvasActive) return;
 
+    // 输入框/文本编辑区域内，走浏览器默认复制粘贴
+    if (this.isEditingTextTarget(e.target)) return;
+
     const isMac = navigator.platform.toLowerCase().includes("mac");
     const mod = isMac ? e.metaKey : e.ctrlKey;
     if (mod && e.key.toLowerCase() === "c") {
-      // 复制选中节点及相关边
-      const selected = new Set(
-        this.engine.graph
-          .getNodes()
-          .filter((n) => n.selected)
-          .map((n) => n.id),
-      );
-      const json = toJSON(this.engine.graph);
-      const nodes = json.nodes.filter((n) => selected.has(n.id));
-      const edges = json.edges.filter((e2) => selected.has(e2.source) && selected.has(e2.target));
-      this.nodeMemory = { nodes, edges };
+      // 复制通过 copy 事件写入系统剪贴板；此处不做处理
     }
     if (mod && e.key.toLowerCase() === "v") {
-      if (!this.nodeMemory) return;
+      // 粘贴通过 paste 事件读取系统剪贴板并决定类型；此处不劫持
+    }
+  };
 
-      // 阻止默认粘贴行为，避免触发 paste 事件
+  private isEditingTextTarget(target: EventTarget | null): boolean {
+    const el = target as unknown;
+    if (!el || !(el instanceof HTMLElement)) return false;
+    const tag = el.tagName;
+    if (tag === "INPUT" || tag === "TEXTAREA") return true;
+    if ((el as HTMLElement).isContentEditable) return true;
+    // 若事件目标在可编辑区域内部
+    if (typeof el.closest === "function" && el.closest('[contenteditable="true"]')) return true;
+    return false;
+  }
+
+  private collectSelectedGraphJSON(): { nodes: any[]; edges: any[] } | null {
+    const selectedIds = new Set(
+      this.engine.graph
+        .getNodes()
+        .filter((n) => n.selected)
+        .map((n) => n.id),
+    );
+    if (selectedIds.size === 0) return null;
+    const json = toJSON(this.engine.graph);
+    const nodes = json.nodes.filter((n) => selectedIds.has(n.id));
+    if (nodes.length === 0) return null;
+    const edges = json.edges.filter((e2) => selectedIds.has(e2.source) && selectedIds.has(e2.target));
+    return { nodes, edges };
+  }
+
+  private buildNodeClipboardPlainText(payload: { nodes: any[]; edges: any[] }): string {
+    const nodeCount = payload.nodes?.length ?? 0;
+    const edgeCount = payload.edges?.length ?? 0;
+    return `AgileJS：已复制 ${nodeCount} 个节点，${edgeCount} 条连线`;
+  }
+
+  private extractNodePayloadFromClipboard(cd: DataTransfer): { nodes: any[]; edges: any[] } | null {
+    // 1) 自定义 MIME（同源同浏览器内通常可用）
+    try {
+      const raw = cd.getData(NODE_CLIPBOARD_MIME);
+      if (raw) {
+        const payload = JSON.parse(raw);
+        if (payload && Array.isArray(payload.nodes) && Array.isArray(payload.edges)) return payload;
+      }
+    } catch {
+      // ignore
+    }
+
+    // 2) text/html 隐藏标记（用于 Safari/部分环境不保留自定义 MIME 的兼容）
+    try {
+      const html = cd.getData("text/html");
+      if (html) {
+        const idx = html.indexOf(NODE_CLIPBOARD_HTML_MARKER_PREFIX);
+        if (idx >= 0) {
+          const start = idx + NODE_CLIPBOARD_HTML_MARKER_PREFIX.length;
+          const end = html.indexOf("-->", start);
+          const encoded = (end >= 0 ? html.slice(start, end) : html.slice(start)).trim();
+          if (encoded) {
+            const raw = decodeURIComponent(encoded);
+            const payload = JSON.parse(raw);
+            if (payload && Array.isArray(payload.nodes) && Array.isArray(payload.edges)) return payload;
+          }
+        }
+      }
+    } catch {
+      // ignore
+    }
+
+    // 3) 兼容旧版本：text/plain 前缀 + JSON
+    try {
+      const text = cd.getData("text/plain");
+      if (text && text.startsWith(NODE_CLIPBOARD_TEXT_PREFIX)) {
+        const raw = text.slice(NODE_CLIPBOARD_TEXT_PREFIX.length);
+        const payload = JSON.parse(raw);
+        if (payload && Array.isArray(payload.nodes) && Array.isArray(payload.edges)) return payload;
+      }
+    } catch {
+      // ignore
+    }
+
+    return null;
+  }
+
+  private onCopy = (e: ClipboardEvent) => {
+    if (!this.canvasActive) return;
+    if (this.isEditingTextTarget(e.target)) return;
+
+    const payload = this.collectSelectedGraphJSON();
+    if (!payload) return;
+
+    // 同步更新内存（用于极端情况下 clipboardData 不可用的兜底）
+    this.nodeMemory = payload;
+
+    // 尽最大可能写入系统剪贴板：优先自定义 MIME，同时写入 text/plain 前缀以最大化兼容性
+    const cd = e.clipboardData;
+    if (!cd) return;
+    try {
+      const raw = JSON.stringify(payload);
+      cd.setData(NODE_CLIPBOARD_MIME, raw);
+      // 文本框等场景粘贴应是可读摘要，而不是 JSON
+      cd.setData("text/plain", this.buildNodeClipboardPlainText(payload));
+      // 兼容：某些环境不保留自定义 MIME，额外写入 text/html 隐藏标记以便画布粘贴解析
+      cd.setData("text/html", `<!--${NODE_CLIPBOARD_HTML_MARKER_PREFIX}${encodeURIComponent(raw)}-->`);
       e.preventDefault();
+    } catch {
+      // 某些浏览器/环境可能限制 setData；此时只能退化为内存拷贝
+    }
+  };
 
-      // 标记刚刚粘贴了节点，用于 onPaste 中判断
-      this.justPastedNode = true;
-      setTimeout(() => {
-        this.justPastedNode = false;
-      }, 100);
+  private onCut = (e: ClipboardEvent) => {
+    // 目前仅实现与 copy 一致的剪贴板写入，不自动删除节点
+    this.onCopy(e);
+  };
 
-      // 粘贴：生成短 ID（不再基于原 ID 叠加后缀），并建立 old->new 映射，保持边引用正确
-      const pasted = JSON.parse(JSON.stringify(this.nodeMemory));
-      const idMap = new Map<string, string>();
-      const genShortId = (prefix: "n" | "e" | "g"): string => {
-        // 约 1~2e7 空间，足够避免冲突；必要时循环检查
-        const t = Date.now().toString(36).slice(-4);
-        const r = Math.random().toString(36).slice(2, 6);
-        return `${prefix}${t}${r}`;
-      };
-      // 若存在 groupId，需要为粘贴出来的节点重建 groupId，避免与原组混淆
-      const groupIdMap = new Map<string, string>();
-      const allocGroupId = (old?: string) => {
-        if (!old) return undefined;
-        if (!groupIdMap.has(old)) {
-          let gid = genShortId("g");
-          // 简单避免与现有节点组冲突（图模型未集中存储组，只需确保字符串短小且随机即可）
-          groupIdMap.set(old, gid);
-        }
-        return groupIdMap.get(old);
-      };
-
-      // 重新映射 groupPath（保持层级结构）
-      const remapGroupPath = (oldPath?: string[]): string[] | undefined => {
-        if (!oldPath || oldPath.length === 0) return undefined;
-        return oldPath.map((oldGid) => allocGroupId(oldGid)!);
-      };
-
-      // 使用统一定位逻辑计算粘贴位置
-      if (pasted.nodes.length > 0) {
-        const { offsetX, offsetY } = this.calculatePasteOffset(pasted.nodes);
-        // 应用偏移
-        for (const n of pasted.nodes) {
-          n.position.x += offsetX;
-          n.position.y += offsetY;
-        }
+  private pasteNodesFromPayload = (payload: { nodes: any[]; edges: any[] }) => {
+    // 粘贴：生成短 ID（不再基于原 ID 叠加后缀），并建立 old->new 映射，保持边引用正确
+    const pasted = JSON.parse(JSON.stringify(payload));
+    const idMap = new Map<string, string>();
+    const genShortId = (prefix: "n" | "e" | "g"): string => {
+      // 约 1~2e7 空间，足够避免冲突；必要时循环检查
+      const t = Date.now().toString(36).slice(-4);
+      const r = Math.random().toString(36).slice(2, 6);
+      return `${prefix}${t}${r}`;
+    };
+    // 若存在 groupId，需要为粘贴出来的节点重建 groupId，避免与原组混淆
+    const groupIdMap = new Map<string, string>();
+    const allocGroupId = (old?: string) => {
+      if (!old) return undefined;
+      if (!groupIdMap.has(old)) {
+        const gid = genShortId("g");
+        // 简单避免与现有节点组冲突（图模型未集中存储组，只需确保字符串短小且随机即可）
+        groupIdMap.set(old, gid);
       }
+      return groupIdMap.get(old);
+    };
 
-      // 计算当前最大 zIndex，使粘贴内容置顶显示
-      let maxZ = 0;
-      for (const n of this.engine.graph.getNodes()) maxZ = Math.max(maxZ, n.zIndex ?? 0);
+    // 重新映射 groupPath（保持层级结构）
+    const remapGroupPath = (oldPath?: string[]): string[] | undefined => {
+      if (!oldPath || oldPath.length === 0) return undefined;
+      return oldPath.map((oldGid) => allocGroupId(oldGid)!);
+    };
+
+    // 使用统一定位逻辑计算粘贴位置
+    if (pasted.nodes.length > 0) {
+      const { offsetX, offsetY } = this.calculatePasteOffset(pasted.nodes);
+      // 应用偏移
       for (const n of pasted.nodes) {
-        // 生成全新短 ID，避免叠加原 ID
-        let newId = genShortId("n");
-        while (this.engine.graph.getNode(newId)) newId = genShortId("n");
-        idMap.set(n.id, newId);
-        n.id = newId;
-        n.selected = true;
-        // 将粘贴的节点置顶（并保持相对顺序）
-        n.zIndex = ++maxZ;
-        // 重建 groupId 和 groupPath（若原节点属于某组）
-        if (n.groupId) n.groupId = allocGroupId(n.groupId);
-        if (n.groupPath) n.groupPath = remapGroupPath(n.groupPath);
+        n.position.x += offsetX;
+        n.position.y += offsetY;
       }
-      for (const ed of pasted.edges) {
-        // 也为边生成短 ID
-        let eid = genShortId("e");
-        while (this.engine.graph.getEdge(eid)) eid = genShortId("e");
-        ed.id = eid;
-        ed.source = idMap.get(ed.source) ?? ed.source;
-        ed.target = idMap.get(ed.target) ?? ed.target;
-      }
-      // 通过命令历史纳入撤销/重做：作为一次"粘贴"事务
-      const hist: any = (this.engine as any).history;
-      if (hist && typeof hist.beginTransaction === "function") {
-        hist.beginTransaction("Paste");
-        try {
-          for (const n of pasted.nodes) {
-            hist.execute(new AddNodeCommand(this.engine.graph, n));
-          }
-          for (const e2 of pasted.edges) {
-            hist.execute(new AddEdgeCommand(this.engine.graph, e2));
-          }
-          hist.commitTransaction();
-        } catch (err) {
-          try {
-            hist.rollbackTransaction();
-          } catch {}
-          // 回退到非历史路径（保险）
-          fromJSON(this.engine.graph, pasted);
-          this.engine.graph.markDirty();
+    }
+
+    // 计算当前最大 zIndex，使粘贴内容置顶显示
+    let maxZ = 0;
+    for (const n of this.engine.graph.getNodes()) maxZ = Math.max(maxZ, n.zIndex ?? 0);
+    for (const n of pasted.nodes) {
+      // 生成全新短 ID，避免叠加原 ID
+      let newId = genShortId("n");
+      while (this.engine.graph.getNode(newId)) newId = genShortId("n");
+      idMap.set(n.id, newId);
+      n.id = newId;
+      n.selected = true;
+      // 将粘贴的节点置顶（并保持相对顺序）
+      n.zIndex = ++maxZ;
+      // 重建 groupId 和 groupPath（若原节点属于某组）
+      if (n.groupId) n.groupId = allocGroupId(n.groupId);
+      if (n.groupPath) n.groupPath = remapGroupPath(n.groupPath);
+    }
+    for (const ed of pasted.edges) {
+      // 也为边生成短 ID
+      let eid = genShortId("e");
+      while (this.engine.graph.getEdge(eid)) eid = genShortId("e");
+      ed.id = eid;
+      ed.source = idMap.get(ed.source) ?? ed.source;
+      ed.target = idMap.get(ed.target) ?? ed.target;
+    }
+    // 通过命令历史纳入撤销/重做：作为一次"粘贴"事务
+    const hist: any = (this.engine as any).history;
+    if (hist && typeof hist.beginTransaction === "function") {
+      hist.beginTransaction("Paste");
+      try {
+        for (const n of pasted.nodes) {
+          hist.execute(new AddNodeCommand(this.engine.graph, n));
         }
-      } else {
-        // 兜底：没有历史对象时，直接写入
+        for (const e2 of pasted.edges) {
+          hist.execute(new AddEdgeCommand(this.engine.graph, e2));
+        }
+        hist.commitTransaction();
+      } catch {
+        try {
+          hist.rollbackTransaction();
+        } catch {}
+        // 回退到非历史路径（保险）
         fromJSON(this.engine.graph, pasted);
         this.engine.graph.markDirty();
       }
+    } else {
+      // 兜底：没有历史对象时，直接写入
+      fromJSON(this.engine.graph, pasted);
+      this.engine.graph.markDirty();
     }
   };
 
@@ -236,15 +339,43 @@ export class ClipboardPlugin implements Plugin {
   private onPaste = async (e: ClipboardEvent) => {
     if (!this.canvasActive) return;
 
-    // 如果刚刚通过快捷键粘贴了节点，忽略此次 paste 事件
-    if (this.justPastedNode) {
+    // 输入框/文本编辑区域内：避免旧版本残留的 JSON 前缀污染文本
+    if (this.isEditingTextTarget(e.target)) {
+      const cd = e.clipboardData;
+      const text = cd?.getData("text/plain") ?? "";
+      if (text.startsWith(NODE_CLIPBOARD_TEXT_PREFIX)) {
+        e.preventDefault();
+        // 对旧剪贴板内容降级为可读摘要
+        try {
+          const raw = text.slice(NODE_CLIPBOARD_TEXT_PREFIX.length);
+          const payload = JSON.parse(raw);
+          if (payload && Array.isArray(payload.nodes) && Array.isArray(payload.edges)) {
+            const summary = this.buildNodeClipboardPlainText(payload);
+            // 尽力插入摘要（不同元素用不同 API）
+            const target = e.target as unknown;
+            if (target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement) {
+              const start = target.selectionStart ?? target.value.length;
+              const end = target.selectionEnd ?? target.value.length;
+              target.setRangeText(summary, start, end, "end");
+              target.dispatchEvent(new Event("input", { bubbles: true }));
+            } else if (target instanceof HTMLElement && target.isContentEditable) {
+              // execCommand 兼容性最好；失败时不再写入任何内容
+              document.execCommand?.("insertText", false, summary);
+            }
+          }
+        } catch {
+          // ignore
+        }
+      }
       return;
     }
 
-    const items = e.clipboardData?.items;
-    if (!items) return;
+    const cd = e.clipboardData;
+    const items = cd?.items;
+    if (!cd || !items) return;
 
-    // 检查是否包含图片
+    // 1) 优先处理图片：在 macOS/部分浏览器里，复制图片可能仍携带 text/plain 表示（甚至可能残留旧文本）
+    // 为满足“最后复制的是图片就粘贴图片”，只要剪贴板里存在 image/*，就先走图片粘贴。
     for (let i = 0; i < items.length; i++) {
       const item = items[i];
       if (item.type.startsWith("image/")) {
@@ -255,6 +386,15 @@ export class ClipboardPlugin implements Plugin {
         }
         return;
       }
+    }
+
+    // 2) 再识别画布节点数据（表示“最后一次复制”来自画布）
+    const payload = this.extractNodePayloadFromClipboard(cd);
+    if (payload) {
+      e.preventDefault();
+      this.nodeMemory = payload;
+      this.pasteNodesFromPayload(payload);
+      return;
     }
   };
 
