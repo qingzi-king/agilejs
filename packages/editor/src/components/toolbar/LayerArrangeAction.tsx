@@ -2,7 +2,7 @@
  * @Description: 图层排列
  * @Author: qingzi.wang
  * @Date: 2025-10-17 15:57:21
- * @LastEditTime: 2025-11-22 11:38:35
+ * @LastEditTime: 2025-12-25 16:49:30
  */
 import React from 'react'
 import type { CanvasEngine } from '@fnt-agilejs/core'
@@ -11,7 +11,7 @@ import {
   sendNodesToBack,
   moveNodesUp,
   moveNodesDown
-} from '@fnt-agilejs/core/src/commands/GraphCommands'
+} from '@fnt-agilejs/core/dist/commands/GraphCommands'
 import Tooltip from '@/components/common/Tooltip'
 import Dropdown from '@/components/common/Dropdown'
 import layerArrangeSvg from '@/assets/images/layer-arrange.svg'

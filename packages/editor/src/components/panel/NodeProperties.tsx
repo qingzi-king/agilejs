@@ -2,7 +2,7 @@
  * @Description: 面板基础图形
  * @Author: qingzi.wang
  * @Date: 2025-10-12 00:12:55
- * @LastEditTime: 2025-11-28 12:49:36
+ * @LastEditTime: 2025-12-25 16:49:08
  */
 import React from 'react'
 import Field from './Field'
@@ -14,7 +14,7 @@ import {
   sendNodesToBack,
   moveNodesUp,
   moveNodesDown
-} from '@fnt-agilejs/core/src/commands/GraphCommands'
+} from '@fnt-agilejs/core/dist/commands/GraphCommands'
 
 export interface NodeDraftSingle {
   id: string
