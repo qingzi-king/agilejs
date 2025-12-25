@@ -99,6 +99,20 @@ export interface InteractionConfig {
   maxScale?: number;
 }
 
+/**
+ * DPR 动态降级配置：在高 DPR 设备（如 Retina 屏幕）上，交互时临时降低渲染分辨率以提升流畅度。
+ */
+export interface DprDegradationConfig {
+  /** 是否启用 DPR 降级。默认 true */
+  enabled?: boolean;
+  /** 触发降级的 DPR 阈值：原生 DPR <= threshold 时不降级。默认 1.5 */
+  threshold?: number;
+  /** 平移画布时的目标 DPR（较高，减少模糊）。默认 1.5 */
+  panTarget?: number;
+  /** 拖动节点时的目标 DPR（较低，优先流畅）。默认 1 */
+  dragTarget?: number;
+}
+
 export interface EngineOptions {
   container: HTMLElement;
   width?: number;
@@ -146,16 +160,7 @@ export interface EngineOptions {
    * DPR 动态降级配置：在高 DPR 设备（如 Retina 屏幕）上，交互时自动降低渲染分辨率以提升流畅度。
    * @default { enabled: true, threshold: 1.5, panTarget: 1.5, dragTarget: 1 }
    */
-  dprDegradation?: {
-    /** 是否启用 DPR 降级。默认 true */
-    enabled?: boolean;
-    /** 触发降级的 DPR 阈值，低于此值不降级。默认 1.5 */
-    threshold?: number;
-    /** 平移画布时的目标 DPR（较高，减少模糊）。默认 1.5 */
-    panTarget?: number;
-    /** 拖动节点时的目标 DPR（较低，优先流畅）。默认 1 */
-    dragTarget?: number;
-  };
+  dprDegradation?: DprDegradationConfig;
 }
 
 export class CanvasEngine {
@@ -1036,6 +1041,30 @@ export class CanvasEngine {
     if (typeof config.enableRotate === "boolean") this.interactionConfig.enableRotate = config.enableRotate;
     if (typeof config.minScale === "number") this.interactionConfig.minScale = config.minScale;
     if (typeof config.maxScale === "number") this.interactionConfig.maxScale = config.maxScale;
+  }
+
+  // DPR 降级配置 api（用于场景序列化/反序列化等场景）
+  getDprDegradation(): Required<DprDegradationConfig> {
+    return {
+      enabled: this._dprDegradeEnabled,
+      threshold: this._dprDegradeThreshold,
+      panTarget: this._dprDegradePanTarget,
+      dragTarget: this._dprDegradeDragTarget,
+    };
+  }
+  setDprDegradation(config: Partial<DprDegradationConfig>): void {
+    if (typeof config.enabled === "boolean") this._dprDegradeEnabled = config.enabled;
+    if (typeof config.threshold === "number") this._dprDegradeThreshold = config.threshold;
+    if (typeof config.panTarget === "number") this._dprDegradePanTarget = config.panTarget;
+    if (typeof config.dragTarget === "number") this._dprDegradeDragTarget = config.dragTarget;
+
+    // 若当前正处于交互中，立即按新配置切换；否则在关闭时确保恢复原生 DPR
+    const isInteracting = this.isPanning || this.isDraggingNodes;
+    if (isInteracting) {
+      this.switchToLowDpr(this.isPanning ? "pan" : "drag");
+    } else if (!this._dprDegradeEnabled) {
+      this.switchToNativeDpr();
+    }
   }
 
   getTheme(): "light" | "dark" {

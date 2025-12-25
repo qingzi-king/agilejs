@@ -4,7 +4,7 @@
  * @Date: 2025-10-15 19:16:31
  * @LastEditTime: 2025-10-15 19:16:31
  */
-import type { CanvasEngine, InteractionConfig } from "../core/CanvasEngine";
+import type { CanvasEngine, InteractionConfig, DprDegradationConfig } from "../core/CanvasEngine";
 import type { GraphJSON } from "./Serialize";
 import { toJSON as graphToJSON, fromJSON as graphFromJSON } from "./Serialize";
 
@@ -14,6 +14,7 @@ export interface CanvasState {
   viewport?: { scale?: number; translation?: { x: number; y: number } };
   edgeSnapshotMode?: "auto" | "off" | "always";
   interactionConfig?: InteractionConfig;
+  dprDegradation?: DprDegradationConfig;
   grid?: { size?: number; color?: string; alpha?: number; type?: "line" | "dot"; visible?: boolean };
   guides?: { threshold?: number; color?: string; visible?: boolean };
   minimap?: Record<string, any>; // 直接透传 MinimapPlugin 的 opts 子集
@@ -36,6 +37,7 @@ export function toScene(engine: CanvasEngine): SceneJSON {
     viewport: { scale: engine.getScale?.(), translation: engine.getTranslation?.() },
     edgeSnapshotMode: engine.getEdgeSnapshotMode?.(),
     interactionConfig: engine.getInteractionConfig?.(),
+    dprDegradation: (engine as any).getDprDegradation ? (engine as any).getDprDegradation() : undefined,
     grid: grid
       ? {
           size: grid.size ?? grid.opts?.size,
@@ -85,6 +87,10 @@ export function fromScene(engine: CanvasEngine, scene: Partial<SceneJSON>): void
     // 交互配置
     if (canvasInfo.interactionConfig && engine.setInteractionConfig) {
       engine.setInteractionConfig(canvasInfo.interactionConfig);
+    }
+    // DPR 降级配置
+    if (canvasInfo.dprDegradation && (engine as any).setDprDegradation) {
+      (engine as any).setDprDegradation(canvasInfo.dprDegradation);
     }
     // 插件：网格/导轨/迷你地图
     const pm: any = (engine.plugins as any).plugins;
