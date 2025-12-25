@@ -9,8 +9,8 @@ import Tooltip from '@/components/common/Tooltip'
 import Modal from '@/components/common/Modal'
 import message from '@/components/common/Message'
 import debugSvg from '@/assets/images/debug.svg'
-import { toScene, fromScene } from '@agilejs/core'
-import type { CanvasEngine } from '@agilejs/core'
+import { toScene, fromScene } from '@fnt-agilejs/core'
+import type { CanvasEngine } from '@fnt-agilejs/core'
 
 interface IProps {
   engine: CanvasEngine | null

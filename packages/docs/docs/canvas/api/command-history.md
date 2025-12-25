@@ -87,7 +87,7 @@ execute(command: ICommand, options?: ExecuteOptions): void
   - `label`: 命令标签
 
 ```typescript
-import { AddNodeCommand } from '@agilejs/core';
+import { AddNodeCommand } from '@fnt-agilejs/core';
 
 // 基本执行
 engine.history.execute(
@@ -326,7 +326,7 @@ engine.history.debugSnapshot();
 ### 基本撤销/重做
 
 ```typescript
-import { AddNodeCommand, MoveNodeCommand } from '@agilejs/core';
+import { AddNodeCommand, MoveNodeCommand } from '@fnt-agilejs/core';
 
 // 添加节点
 engine.history.execute(
@@ -418,7 +418,7 @@ function deleteSelection() {
 :::
 
 ```typescript
-import { ICommand, CommandDebugInfo } from '@agilejs/core';
+import { ICommand, CommandDebugInfo } from '@fnt-agilejs/core';
 
 class ToggleNodeVisibilityCommand implements ICommand {
   label = 'Toggle Visibility';

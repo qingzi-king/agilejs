@@ -3,7 +3,7 @@
  * @Author: qingzi.wang
  * @Date: 2025-12-02 10:05:00
  */
-import { NodeData, EdgeData, Point, CanvasEngine, getPortWorldPosition } from '@agilejs/core'
+import { NodeData, EdgeData, Point, CanvasEngine, getPortWorldPosition } from '@fnt-agilejs/core'
 
 // 距离工具
 function dist2(a: Point, b: Point): number {

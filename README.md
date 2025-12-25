@@ -8,8 +8,8 @@
 
 | Package           | 说明                                                        | 技术栈       |
 | ----------------- | ----------------------------------------------------------- | ------------ |
-| `packages/core`   | 画布引擎：数据模型、渲染器、交互插件等（`@agilejs/core`）   | TypeScript   |
-| `packages/editor` | Web 编辑器：基于 core 的可视化编辑应用（`@agilejs/editor`） | React + Vite |
+| `packages/core`   | 画布引擎：数据模型、渲染器、交互插件等（`@fnt-agilejs/core`）   | TypeScript   |
+| `packages/editor` | Web 编辑器：基于 core 的可视化编辑应用（`@fnt-agilejs/editor`） | React + Vite |
 | `packages/docs`   | 文档站点：用户文档/指南/示例                                | Docusaurus   |
 
 <div>
@@ -21,8 +21,8 @@
 ```
 .
 ├── packages/
-│   ├── core/            # 画布引擎：数据模型、渲染器、交互插件等（@agilejs/core）
-│   ├── editor/          # Web 编辑器：基于 core 的可视化编辑应用（@agilejs/editor）
+│   ├── core/            # 画布引擎：数据模型、渲染器、交互插件等（@fnt-agilejs/core）
+│   ├── editor/          # Web 编辑器：基于 core 的可视化编辑应用（@fnt-agilejs/editor）
 │   └── docs/            # 文档站点：Docusaurus（用户文档/指南/示例）
 ├── prettier.config.cjs  # 统一代码格式化配置（2 空格缩进）
 ├── .prettierignore
@@ -42,7 +42,7 @@
 ### packages/editor（Web 编辑器）
 
 - 基于 React + Vite 的前端应用
-- 以 `@agilejs/core` 为底座，组合 UI 面板、工具栏、属性编辑等，形成可用的图形编辑器工程
+- 以 `@fnt-agilejs/core` 为底座，组合 UI 面板、工具栏、属性编辑等，形成可用的图形编辑器工程
 
 ### packages/docs（文档站点）
 

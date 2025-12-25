@@ -623,7 +623,7 @@ engine.events.on('canvas:box-select-end', ({ start, end, rect, additive, cancele
 
 ```typescript
 // 扩展事件类型
-declare module '@agilejs/core' {
+declare module '@fnt-agilejs/core' {
   interface EngineEvents {
     'custom:event': { data: string };
     'validation:failed': { nodeId: string; errors: string[] };
@@ -948,7 +948,7 @@ engine.events.on('canvas:box-select-end', ({ canceled, selected }) => {
 ### 1. 使用类型安全
 
 ```typescript
-import type { EngineEvents } from '@agilejs/core';
+import type { EngineEvents } from '@fnt-agilejs/core';
 
 function handleGraphChanged(payload: EngineEvents['graph:change']): void {
   console.log(payload.reason);

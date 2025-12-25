@@ -1,5 +1,5 @@
 {
-  "name": "@agilejs/editor",
+  "name": "@fnt-agilejs/editor",
   "description": "AgileJS Web 编辑器",
   "author": "qingzi.wang",
   "version": "1.0.0",
@@ -17,7 +17,7 @@
     "pre-commit": "lint-staged"
   },
   "dependencies": {
-    "@agilejs/core": "workspace:*",
+    "@fnt-agilejs/core": "workspace:*",
     "ace-builds": "^1.43.4",
     "lodash": "^4.17.21",
     "react": "19.2.0",

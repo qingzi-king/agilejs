@@ -5,7 +5,7 @@
 ## 基本使用
 
 ```typescript
-import { CanvasEngine, MinimapPlugin } from '@agilejs/core';
+import { CanvasEngine, MinimapPlugin } from '@fnt-agilejs/core';
 
 const engine = new CanvasEngine({
   container: document.getElementById('canvas-container')!,

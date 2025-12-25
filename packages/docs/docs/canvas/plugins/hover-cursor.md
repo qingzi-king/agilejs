@@ -5,7 +5,7 @@
 ## 基本使用
 
 ```typescript
-import { CanvasEngine, HoverCursorPlugin } from '@agilejs/core';
+import { CanvasEngine, HoverCursorPlugin } from '@fnt-agilejs/core';
 
 const engine = new CanvasEngine({
   container: document.getElementById('canvas-container')!,

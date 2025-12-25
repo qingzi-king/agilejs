@@ -4,9 +4,9 @@
  * @Date: 2025-11-10
  */
 
-import type { CanvasEngine } from '@agilejs/core'
-import type { NodeData } from '@agilejs/core'
-import { toScene, fromScene } from '@agilejs/core'
+import type { CanvasEngine } from '@fnt-agilejs/core'
+import type { NodeData } from '@fnt-agilejs/core'
+import { toScene, fromScene } from '@fnt-agilejs/core'
 
 /**
  * 节点匹配器 - 支持多种匹配方式

@@ -510,7 +510,7 @@ export default defineConfig({
       output: {
         manualChunks: {
           'react-vendor': ['react', 'react-dom'],
-          'canvas-vendor': ['@agilejs/core'],
+          'canvas-vendor': ['@fnt-agilejs/core'],
         },
       },
     },

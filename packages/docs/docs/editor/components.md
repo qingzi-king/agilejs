@@ -30,7 +30,7 @@ Web 编辑器采用组件化设计，所有功能模块化封装。
 主编辑器页面，集成所有功能模块。
 
 ```typescript
-import { CanvasEngine } from '@agilejs/core';
+import { CanvasEngine } from '@fnt-agilejs/core';
 import Toolbar from '@/components/toolbar';
 import PropertyPanel from '@/components/PropertyPanel';
 import ShapesPanel from '@/components/ShapesPanel';

@@ -21,7 +21,7 @@ import {
   SetGridOptionsCommand,
   SetGuidesOptionsCommand,
   UpdateNodePortsCommand
-} from '@agilejs/core'
+} from '@fnt-agilejs/core'
 import { useCanvasStore, useUIStore, useSelectionStore } from '@/store'
 import CustomDataEditor from './panel/CustomDataEditor'
 import PortsEditor, { PortsEditorRef } from './panel/PortsEditor'

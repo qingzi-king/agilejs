@@ -9,7 +9,7 @@ import Tooltip from '@/components/common/Tooltip'
 import Dropdown from '@/components/common/Dropdown'
 import nodeControlSvg from '@/assets/images/node-control.svg'
 
-import type { CanvasEngine } from '@agilejs/core'
+import type { CanvasEngine } from '@fnt-agilejs/core'
 
 interface NodeControlActionProps {
   engine: CanvasEngine | null

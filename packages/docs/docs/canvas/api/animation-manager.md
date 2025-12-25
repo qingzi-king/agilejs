@@ -62,7 +62,7 @@ engine.animationManager.add({
 内置的缓动函数在 `EasingFns` 对象中：
 
 ```typescript
-import { EasingFns } from '@agilejs/core';
+import { EasingFns } from '@fnt-agilejs/core';
 
 // 可用的缓动函数
 EasingFns.linear        // 线性

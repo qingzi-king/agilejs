@@ -133,7 +133,7 @@ export const graphApi = {
 
 ```typescript
 import { graphApi } from '@/service/graphApi';
-import { fromJSON } from '@agilejs/core';
+import { fromJSON } from '@fnt-agilejs/core';
 
 async function loadGraphFromServer(
   engine: CanvasEngine,

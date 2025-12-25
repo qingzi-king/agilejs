@@ -5,7 +5,7 @@
 ## 基本使用
 
 ```typescript
-import { CanvasEngine, GridPlugin } from '@agilejs/core';
+import { CanvasEngine, GridPlugin } from '@fnt-agilejs/core';
 
 const engine = new CanvasEngine({
   container: document.getElementById('canvas-container')!,

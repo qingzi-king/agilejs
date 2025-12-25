@@ -59,7 +59,7 @@ Canvas 引擎现已支持移动端触摸交互，通过统一的指针事件抽�
 提供统一的指针事件抽象，自动处理鼠标和触摸事件的差异：
 
 ```typescript
-import { PointerEventAdapter } from '@agilejs/core';
+import { PointerEventAdapter } from '@fnt-agilejs/core';
 
 // 归一化事件
 const pointer = PointerEventAdapter.normalize(event);
@@ -101,7 +101,7 @@ const isMobile = PointerEventAdapter.isTouchDevice();
 引擎初始化时无需特殊配置，移动端支持已内置：
 
 ```typescript
-import { CanvasEngine, PanZoomPlugin, DragPlugin, MinimapPlugin } from '@agilejs/core';
+import { CanvasEngine, PanZoomPlugin, DragPlugin, MinimapPlugin } from '@fnt-agilejs/core';
 
 const engine = new CanvasEngine({
   container: document.getElementById('canvas'),

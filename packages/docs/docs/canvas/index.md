@@ -19,15 +19,15 @@ AgileJS Canvas 是一个基于 HTML Canvas 的轻量级图形编辑和渲染引�
 ### 安装
 
 ```bash
-npm install @agilejs/core
+npm install @fnt-agilejs/core
 # 或
-pnpm add @agilejs/core
+pnpm add @fnt-agilejs/core
 ```
 
 ### 基础使用
 
 ```typescript
-import { CanvasEngine, PanZoomPlugin, DragPlugin } from '@agilejs/core';
+import { CanvasEngine, PanZoomPlugin, DragPlugin } from '@fnt-agilejs/core';
 
 // 创建引擎实例
 const engine = new CanvasEngine({

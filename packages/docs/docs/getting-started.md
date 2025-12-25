@@ -47,7 +47,7 @@ pnpm start
 ```
 agilejs/
 ├── packages/
-│   ├── core/            # Canvas 引擎核心包 (@agilejs/core)
+│   ├── core/            # Canvas 引擎核心包 (@fnt-agilejs/core)
 │   │   ├── src/
 │   │   │   ├── commands/   # 命令系统（撤销/重做）
 │   │   │   ├── core/       # 核心引擎（CanvasEngine、EventBus、Animation 等）

@@ -27,7 +27,7 @@ interface ShapeRenderer {
 
 :::tip
 
-可参考 `@agilejs/core/src/renderers/basic/RectRender.ts` 实现自定义图形渲染器。
+可参考 `@fnt-agilejs/core/src/renderers/basic/RectRender.ts` 实现自定义图形渲染器。
 
 :::
 
@@ -265,7 +265,7 @@ class IconTextNodeRenderer implements ShapeRenderer {
 
 :::tip
 
-可参考 `@agilejs/core/src/renderers/edges/BezierEdgeRenderer.ts` 实现自定义边渲染器。
+可参考 `@fnt-agilejs/core/src/renderers/edges/BezierEdgeRenderer.ts` 实现自定义边渲染器。
 
 :::
 

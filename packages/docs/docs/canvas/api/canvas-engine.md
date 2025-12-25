@@ -577,7 +577,7 @@ import {
   GridPlugin, 
   DragPlugin,
   PanZoomPlugin 
-} from '@agilejs/core';
+} from '@fnt-agilejs/core';
 
 // 创建引擎
 const engine = new CanvasEngine({

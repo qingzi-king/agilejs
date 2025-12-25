@@ -5,7 +5,7 @@
 ## 基本使用
 
 ```typescript
-import { CanvasEngine, PolylineNodeEditPlugin } from '@agilejs/core';
+import { CanvasEngine, PolylineNodeEditPlugin } from '@fnt-agilejs/core';
 
 const engine = new CanvasEngine({
   container: document.getElementById('canvas-container')!,

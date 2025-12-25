@@ -9,7 +9,7 @@ import Tooltip from '@/components/common/Tooltip'
 import undoSvg from '@/assets/images/undo.svg'
 import redoSvg from '@/assets/images/redo.svg'
 
-import type { CanvasEngine } from '@agilejs/core'
+import type { CanvasEngine } from '@fnt-agilejs/core'
 
 interface UndoRedoActionProps {
   engine: CanvasEngine | null

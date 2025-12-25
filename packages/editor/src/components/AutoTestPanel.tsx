@@ -5,7 +5,7 @@
  */
 
 import React, { useEffect, useState } from 'react'
-import type { CanvasEngine } from '@agilejs/core'
+import type { CanvasEngine } from '@fnt-agilejs/core'
 import { AutoTestManager, predefinedScenarios, type TestStep } from '../utils/autoTest'
 
 interface AutoTestPanelProps {

@@ -42,7 +42,7 @@ import {
   KeyboardPlugin,
   toJSON,
   fromJSON,
-} from "@agilejs/core";
+} from "@fnt-agilejs/core";
 
 const engine = new CanvasEngine({ container: document.getElementById("app")!, background: "#fff" });
 engine.renderers.register(new RectRenderer());

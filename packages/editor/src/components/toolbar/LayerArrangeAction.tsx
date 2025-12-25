@@ -5,13 +5,13 @@
  * @LastEditTime: 2025-11-22 11:38:35
  */
 import React from 'react'
-import type { CanvasEngine } from '@agilejs/core'
+import type { CanvasEngine } from '@fnt-agilejs/core'
 import {
   bringNodesToFront,
   sendNodesToBack,
   moveNodesUp,
   moveNodesDown
-} from '@agilejs/core/src/commands/GraphCommands'
+} from '@fnt-agilejs/core/src/commands/GraphCommands'
 import Tooltip from '@/components/common/Tooltip'
 import Dropdown from '@/components/common/Dropdown'
 import layerArrangeSvg from '@/assets/images/layer-arrange.svg'

@@ -59,7 +59,7 @@
 ### 基本使用
 
 ```typescript
-import { CanvasEngine, PanZoomPlugin, DragPlugin } from '@agilejs/core';
+import { CanvasEngine, PanZoomPlugin, DragPlugin } from '@fnt-agilejs/core';
 
 const engine = new CanvasEngine({
   container: document.getElementById('canvas-container')!,
@@ -77,7 +77,7 @@ engine.start();
 大多数插件支持配置选项：
 
 ```typescript
-import { ResizeRotatePlugin } from '@agilejs/core';
+import { ResizeRotatePlugin } from '@fnt-agilejs/core';
 
 engine.plugins.use(
   new ResizeRotatePlugin({
@@ -138,7 +138,7 @@ interface Plugin {
 您可以创建自己的插件来扩展功能：
 
 ```typescript
-import { Plugin, CanvasEngine } from '@agilejs/core';
+import { Plugin, CanvasEngine } from '@fnt-agilejs/core';
 
 class MyCustomPlugin implements Plugin {
   readonly id = 'my-custom-plugin';

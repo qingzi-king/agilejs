@@ -5,7 +5,7 @@
  * @LastEditTime: 2025-11-29 10:00:00
  */
 import { create } from 'zustand'
-import type { CanvasEngine } from '@agilejs/core'
+import type { CanvasEngine } from '@fnt-agilejs/core'
 
 // 定义 Canvas 状态接口
 interface CanvasState {

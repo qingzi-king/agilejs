@@ -5,7 +5,7 @@
  */
 import React from 'react'
 import Tooltip from '@/components/common/Tooltip'
-import type { CanvasEngine } from '@agilejs/core'
+import type { CanvasEngine } from '@fnt-agilejs/core'
 
 interface ZoomActionProps {
   engine: CanvasEngine | null

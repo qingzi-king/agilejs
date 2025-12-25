@@ -1,6 +1,6 @@
 # AgileJS Editor
 
-AgileJS Web 编辑器（`@agilejs/editor`）是基于 `@agilejs/core` 的可视化图形编辑应用，用于演示与验证引擎能力，并提供一套可落地的编辑器工程模板。
+AgileJS Web 编辑器（`@fnt-agilejs/editor`）是基于 `@fnt-agilejs/core` 的可视化图形编辑应用，用于演示与验证引擎能力，并提供一套可落地的编辑器工程模板。
 
 ## 能力概览
 

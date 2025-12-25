@@ -19,8 +19,8 @@ import jsonWorkerUrl from 'ace-builds/src-noconflict/worker-json?url'
 
 // 配置 worker 路径，使用 Vite 的 ?url 导入确保构建后路径正确
 ace.config.setModuleUrl('ace/mode/json_worker', jsonWorkerUrl)
-import { toScene, fromScene } from '@agilejs/core'
-import type { CanvasEngine } from '@agilejs/core'
+import { toScene, fromScene } from '@fnt-agilejs/core'
+import type { CanvasEngine } from '@fnt-agilejs/core'
 
 interface IProps {
   engine: CanvasEngine | null

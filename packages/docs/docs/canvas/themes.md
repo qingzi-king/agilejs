@@ -119,7 +119,7 @@ interface CoreThemePalette {
 ### 获取主题配置
 
 ```typescript
-import { THEME_PALETTES } from '@agilejs/core';
+import { THEME_PALETTES } from '@fnt-agilejs/core';
 
 // 获取亮色主题配置
 const lightTheme = THEME_PALETTES.light;
@@ -131,7 +131,7 @@ const darkTheme = THEME_PALETTES.dark;
 ### 自定义主题
 
 ```typescript
-import { mergePalette, THEME_PALETTES } from '@agilejs/core';
+import { mergePalette, THEME_PALETTES } from '@fnt-agilejs/core';
 
 // 基于亮色主题自定义
 const customTheme = mergePalette(THEME_PALETTES.light, {

@@ -13,7 +13,7 @@ CanvasEngine 提供了丰富的配置选项，用于控制引擎的行为、性�
 ### 必需配置
 
 ```typescript
-import { CanvasEngine } from '@agilejs/core';
+import { CanvasEngine } from '@fnt-agilejs/core';
 
 const engine = new CanvasEngine({
   container: document.getElementById('canvas')!, // 容器元素（必需）
@@ -437,7 +437,7 @@ engine.fitView({
 #### 图数据序列化（仅节点和边）
 
 ```typescript
-import { toJSON, fromJSON } from '@agilejs/core';
+import { toJSON, fromJSON } from '@fnt-agilejs/core';
 
 // 导出图数据（仅包含节点和边）
 const graphData = toJSON(engine.graph);
@@ -460,7 +460,7 @@ fromJSON(engine.graph, savedData);
 场景序列化包含更多信息：图数据 + 画布状态（视口、主题、背景、插件配置等）。
 
 ```typescript
-import { toScene, fromScene } from '@agilejs/core';
+import { toScene, fromScene } from '@fnt-agilejs/core';
 
 // 导出完整场景（包含画布状态和图数据）
 const sceneData = toScene(engine);

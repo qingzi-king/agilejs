@@ -1,11 +1,17 @@
 {
-  "name": "@agilejs/core",
-  "version": "0.1.0",
+  "name": "@fnt-agilejs/core",
+  "version": "1.0.0-rc.1",
+  "description": "一个轻量级、零依赖的 Canvas 可视化引擎",
   "type": "module",
   "engines": {
     "node": ">=18.12.0"
   },
-  "main": "src/index.ts",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "keywords": [
+    "diagram-editor",
+    "canvas-rendering-engine"
+  ],
   "files": [
     "dist"
   ],
@@ -21,5 +27,17 @@
   "devDependencies": {
     "typescript": "^5.5.4",
     "javascript-obfuscator": "^4.1.0"
+  },
+  "homepage": "https://agilejs.funenc.com",
+  "bugs": {
+    "url": "https://github.com/qingzi-king/agilejs/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/qingzi-king/agilejs.git"
+  },
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org"
   }
 }

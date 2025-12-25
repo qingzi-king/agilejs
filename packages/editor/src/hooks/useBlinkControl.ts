@@ -4,8 +4,8 @@
  * @Date: 2025-11-18
  */
 import { useState, useEffect, useCallback } from 'react'
-import type { CanvasEngine } from '@agilejs/core'
-import { BlinkPlugin } from '@agilejs/core'
+import type { CanvasEngine } from '@fnt-agilejs/core'
+import { BlinkPlugin } from '@fnt-agilejs/core'
 
 export interface BlinkState {
   enabled: boolean

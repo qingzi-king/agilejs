@@ -65,8 +65,8 @@ import {
   AddEdgeCommand,
   AddNodeCommand,
   ImageRenderer
-} from '@agilejs/core'
-// SvgPathRenderer 已通过 @agilejs/core 暴露
+} from '@fnt-agilejs/core'
+// SvgPathRenderer 已通过 @fnt-agilejs/core 暴露
 // 引擎内置闪烁插件替代 web 侧 utils/blink
 import { useFormatPainter } from '@/hooks/useFormatPainter'
 

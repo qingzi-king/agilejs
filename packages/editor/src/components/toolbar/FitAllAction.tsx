@@ -8,7 +8,7 @@ import React from 'react'
 import Tooltip from '@/components/common/Tooltip'
 import fitAllSvg from '@/assets/images/fitall.svg'
 
-import type { CanvasEngine } from '@agilejs/core'
+import type { CanvasEngine } from '@fnt-agilejs/core'
 
 interface FitAllActionProps {
   engine: CanvasEngine | null

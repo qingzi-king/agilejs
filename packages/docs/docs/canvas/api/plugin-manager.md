@@ -51,7 +51,7 @@ use(...plugins: Plugin[]): void
 - `plugins`: 要注册的插件（支持多个）
 
 ```typescript
-import { GridPlugin, DragPlugin, PanZoomPlugin } from '@agilejs/core';
+import { GridPlugin, DragPlugin, PanZoomPlugin } from '@fnt-agilejs/core';
 
 // 注册单个插件
 engine.plugins.use(new GridPlugin({ size: 20 }));
@@ -256,7 +256,7 @@ class MyPlugin implements Plugin {
 ### 简单插件
 
 ```typescript
-import { Plugin, CanvasEngine, NodeData } from '@agilejs/core';
+import { Plugin, CanvasEngine, NodeData } from '@fnt-agilejs/core';
 
 class HelloPlugin implements Plugin {
   id = 'hello';

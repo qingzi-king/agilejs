@@ -25,7 +25,7 @@ AgileJS Web 编辑器基于 React 19 + TypeScript 构建，采用模块化架构
 - 响应式设计
 
 ### Canvas 引擎
-- **@agilejs/core**: 自研图形引擎
+- **@fnt-agilejs/core**: 自研图形引擎
 - 插件化架构
 - 高性能渲染
 
@@ -81,7 +81,7 @@ packages/editor/
 │       Business Logic Layer          │  Hooks, Utils
 │    (useBlinkControl, utils)         │
 ├─────────────────────────────────────┤
-│      Canvas Engine Layer            │  @agilejs/core
+│      Canvas Engine Layer            │  @fnt-agilejs/core
 │    (CanvasEngine, Plugins)          │
 └─────────────────────────────────────┘
 ```

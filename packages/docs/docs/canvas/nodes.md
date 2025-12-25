@@ -760,7 +760,7 @@ Canvas 引擎内置了丰富的图形类型，可直接使用。通过设置节�
 使用 ClipboardPlugin 可以直接从系统剪贴板粘贴图片：
 
 ```typescript
-import { ClipboardPlugin } from '@agilejs/core';
+import { ClipboardPlugin } from '@fnt-agilejs/core';
 
 // 配置图片粘贴参数
 engine.plugins.use(new ClipboardPlugin({
@@ -1489,7 +1489,7 @@ if (node && node.data) {
 
 ```typescript
 // 使用事务（Transaction）批量执行命令，支持撤销
-import { MoveNodesCommand } from '@agilejs/core';
+import { MoveNodesCommand } from '@fnt-agilejs/core';
 
 // 开始事务
 engine.history.beginTransaction('Batch Move');
@@ -1529,7 +1529,7 @@ for (let i = 0; i < 1000; i++) {
 // 所有节点添加完成后才会在下一帧统一渲染一次
 
 // ✅ 更优：使用序列化 API 批量导入（减少版本更新次数）
-import { fromScene } from '@agilejs/core';
+import { fromScene } from '@fnt-agilejs/core';
 
 const sceneData = {
   nodes: Array.from({ length: 1000 }, (_, i) => ({

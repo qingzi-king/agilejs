@@ -61,7 +61,7 @@ type ExecuteOptions = {
 添加节点命令。
 
 ```typescript
-import { AddNodeCommand } from '@agilejs/core';
+import { AddNodeCommand } from '@fnt-agilejs/core';
 
 const node: NodeData = {
   id: 'node-1',
@@ -82,7 +82,7 @@ engine.history.execute(
 删除节点命令。
 
 ```typescript
-import { RemoveNodeCommand } from '@agilejs/core';
+import { RemoveNodeCommand } from '@fnt-agilejs/core';
 
 engine.history.execute(
   new RemoveNodeCommand(engine.graph, 'node-1')
@@ -96,7 +96,7 @@ engine.history.execute(
 移动节点命令。
 
 ```typescript
-import { MoveNodeCommand } from '@agilejs/core';
+import { MoveNodeCommand } from '@fnt-agilejs/core';
 
 engine.history.execute(
   new MoveNodeCommand(
@@ -115,7 +115,7 @@ engine.history.execute(
 批量移动节点命令。
 
 ```typescript
-import { MoveNodesCommand } from '@agilejs/core';
+import { MoveNodesCommand } from '@fnt-agilejs/core';
 
 // 将多个节点向右移动 50px，向下移动 30px
 engine.history.execute(
@@ -135,7 +135,7 @@ engine.history.execute(
 调整节点大小命令。
 
 ```typescript
-import { ResizeNodeCommand } from '@agilejs/core';
+import { ResizeNodeCommand } from '@fnt-agilejs/core';
 
 engine.history.execute(
   new ResizeNodeCommand(
@@ -154,7 +154,7 @@ engine.history.execute(
 更新节点数据命令（用于自定义数据）。
 
 ```typescript
-import { UpdateNodeDataCommand } from '@agilejs/core';
+import { UpdateNodeDataCommand } from '@fnt-agilejs/core';
 
 engine.history.execute(
   new UpdateNodeDataCommand(
@@ -172,7 +172,7 @@ engine.history.execute(
 添加边命令。
 
 ```typescript
-import { AddEdgeCommand } from '@agilejs/core';
+import { AddEdgeCommand } from '@fnt-agilejs/core';
 
 const edge: EdgeData = {
   id: 'edge-1',
@@ -193,7 +193,7 @@ engine.history.execute(
 删除边命令。
 
 ```typescript
-import { RemoveEdgeCommand } from '@agilejs/core';
+import { RemoveEdgeCommand } from '@fnt-agilejs/core';
 
 engine.history.execute(
   new RemoveEdgeCommand(engine.graph, 'edge-1')
@@ -207,7 +207,7 @@ engine.history.execute(
 更新边数据命令。
 
 ```typescript
-import { UpdateEdgeDataCommand } from '@agilejs/core';
+import { UpdateEdgeDataCommand } from '@fnt-agilejs/core';
 
 engine.history.execute(
   new UpdateEdgeDataCommand(
@@ -225,7 +225,7 @@ engine.history.execute(
 切换边形状命令。
 
 ```typescript
-import { SetEdgeShapeCommand } from '@agilejs/core';
+import { SetEdgeShapeCommand } from '@fnt-agilejs/core';
 
 engine.history.execute(
   new SetEdgeShapeCommand(
@@ -243,7 +243,7 @@ engine.history.execute(
 重新连接边命令。
 
 ```typescript
-import { ReconnectEdgeCommand } from '@agilejs/core';
+import { ReconnectEdgeCommand } from '@fnt-agilejs/core';
 
 engine.history.execute(
   new ReconnectEdgeCommand(
@@ -262,7 +262,7 @@ engine.history.execute(
 将多个命令作为一个原子操作执行。
 
 ```typescript
-import { AddNodeCommand, AddEdgeCommand } from '@agilejs/core';
+import { AddNodeCommand, AddEdgeCommand } from '@fnt-agilejs/core';
 
 // 开始事务
 engine.history.beginTransaction('Add Nodes and Edge');
@@ -403,7 +403,7 @@ engine.history.execute(
 将多个节点编组（实际代码中已有此命令）。
 
 ```typescript
-import { GroupNodesCommand } from '@agilejs/core';
+import { GroupNodesCommand } from '@fnt-agilejs/core';
 
 // 使用内置命令
 engine.history.execute(

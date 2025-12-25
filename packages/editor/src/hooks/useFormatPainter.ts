@@ -6,7 +6,7 @@
 import { useEffect, useRef } from 'react'
 import { useCanvasStore, useFormatPainterStore } from '@/store'
 import { hitTestNodes, hitTestEdges } from '@/utils/hittest'
-import { UpdateNodeDataCommand, UpdateEdgeDataCommand } from '@agilejs/core'
+import { UpdateNodeDataCommand, UpdateEdgeDataCommand } from '@fnt-agilejs/core'
 
 export const useFormatPainter = () => {
   const engine = useCanvasStore((state) => state.engine)

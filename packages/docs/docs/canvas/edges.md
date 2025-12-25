@@ -470,7 +470,7 @@ if (edge) {
 }
 
 // 更新连接（通过命令）
-import { ReconnectEdgeCommand } from '@agilejs/core';
+import { ReconnectEdgeCommand } from '@fnt-agilejs/core';
 const edge = engine.graph.getEdge('edge-1');
 if (edge) {
   engine.history.execute(

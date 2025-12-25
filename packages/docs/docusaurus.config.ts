@@ -167,7 +167,7 @@ const config: Config = {
           items: [
             {
               label: 'Canvas 包',
-              href: 'https://www.npmjs.com/package/@agilejs/core',
+              href: 'https://www.npmjs.com/package/@fnt-agilejs/core',
             },
             {
               label: 'Web 编辑器',

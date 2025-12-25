@@ -1,5 +1,5 @@
 import { useState, useEffect, useImperativeHandle, forwardRef } from 'react'
-import { NodeData, PortData, AnchorPosition } from '@agilejs/core'
+import { NodeData, PortData, AnchorPosition } from '@fnt-agilejs/core'
 
 interface PortsEditorProps {
   node: NodeData | null

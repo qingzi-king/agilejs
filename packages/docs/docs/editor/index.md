@@ -63,7 +63,7 @@ pnpm build
 - **TypeScript**: 类型安全
 - **Vite**: 构建工具
 - **Tailwind CSS**: 样式框架
-- **@agilejs/core**: 图形引擎
+- **@fnt-agilejs/core**: 图形引擎
 
 ## 目录结构
 
@@ -94,7 +94,7 @@ packages/editor/
 ### 自定义组件
 
 ```typescript
-import { CanvasEngine } from '@agilejs/core';
+import { CanvasEngine } from '@fnt-agilejs/core';
 import { useEffect, useRef } from 'react';
 
 function MyCanvas() {

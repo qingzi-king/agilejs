@@ -8,7 +8,7 @@ sidebar_position: 10
 
 :::info
 
-引擎内置了一些常用工具函数，位于 `@agilejs/core/src/utils` 目录下。
+引擎内置了一些常用工具函数，位于 `@fnt-agilejs/core/src/utils` 目录下。
 
 :::
 
@@ -70,7 +70,7 @@ function showTooltip(node: NodeData) {
 
 :::info
 
-引擎内置了 `pointInRect` 和 `hitTestNode` 等碰撞检测工具（位于 `@agilejs/core/src/utils/hittest`），其他方法为扩展示例。
+引擎内置了 `pointInRect` 和 `hitTestNode` 等碰撞检测工具（位于 `@fnt-agilejs/core/src/utils/hittest`），其他方法为扩展示例。
 
 :::
 
@@ -78,7 +78,7 @@ function showTooltip(node: NodeData) {
 检查点是否在矩形内。
 
 ```typescript
-import { pointInRect } from '@agilejs/core/src/utils/hittest';
+import { pointInRect } from '@fnt-agilejs/core/src/utils/hittest';
 
 const isInside = pointInRect(
   { x: 150, y: 150 },
@@ -90,7 +90,7 @@ const isInside = pointInRect(
 检测点是否命中节点（支持旋转、line 节点等复杂情况）。
 
 ```typescript
-import { hitTestNode } from '@agilejs/core/src/utils/hittest';
+import { hitTestNode } from '@fnt-agilejs/core/src/utils/hittest';
 
 const worldPoint = engine.toWorld({ x: e.clientX, y: e.clientY });
 const node = engine.graph.getNodes().find(n => 
@@ -190,7 +190,7 @@ if (dist < SNAP_THRESHOLD) {
 
 :::info
 
-引擎内置了 `Quadtree` 类（位于 `@agilejs/core/src/utils/quadtree`），用于大规模节点的空间查询优化。
+引擎内置了 `Quadtree` 类（位于 `@fnt-agilejs/core/src/utils/quadtree`），用于大规模节点的空间查询优化。
 
 :::
 
@@ -198,7 +198,7 @@ if (dist < SNAP_THRESHOLD) {
 四叉树空间索引，用于高效的空间查询。
 
 ```typescript
-import { Quadtree, buildQuadtreeFromNodes } from '@agilejs/core/src/utils/quadtree';
+import { Quadtree, buildQuadtreeFromNodes } from '@fnt-agilejs/core/src/utils/quadtree';
 
 // 从节点构建四叉树
 const qt = buildQuadtreeFromNodes(engine.graph.getNodes(), {
@@ -225,7 +225,7 @@ console.log(`找到 ${results.length} 个节点`);
 
 :::info
 
-引擎内置了端口和连线相关工具（位于 `@agilejs/core/src/utils/ports`、`orthogonal`、`edgeLabel`）。
+引擎内置了端口和连线相关工具（位于 `@fnt-agilejs/core/src/utils/ports`、`orthogonal`、`edgeLabel`）。
 
 :::
 
@@ -233,7 +233,7 @@ console.log(`找到 ${results.length} 个节点`);
 获取端口的世界坐标（含旋转）。
 
 ```typescript
-import { getPortWorldPosition } from '@agilejs/core/src/utils/ports';
+import { getPortWorldPosition } from '@fnt-agilejs/core/src/utils/ports';
 
 const node = engine.graph.getNode('node-1');
 const portPos = getPortWorldPosition(node, 'port-right');
@@ -247,7 +247,7 @@ if (portPos) {
 构建正交边的折点序列。
 
 ```typescript
-import { buildOrthogonalPathPoints } from '@agilejs/core/src/utils/orthogonal';
+import { buildOrthogonalPathPoints } from '@fnt-agilejs/core/src/utils/orthogonal';
 
 const edge = engine.graph.getEdge('edge-1');
 const points = buildOrthogonalPathPoints(edge, engine.graph);
@@ -263,7 +263,7 @@ import {
   edgeLabelPositionStraight,
   edgeLabelPositionOrthogonal,
   edgeLabelPositionBezier 
-} from '@agilejs/core/src/utils/edgeLabel';
+} from '@fnt-agilejs/core/src/utils/edgeLabel';
 
 const edge = engine.graph.getEdge('edge-1');
 const labelPos = edgeLabelPositionOrthogonal(edge, engine.graph);
@@ -277,7 +277,7 @@ if (labelPos) {
 
 :::info
 
-引擎内置了边渲染相关的通用工具（位于 `@agilejs/core/src/utils/edgeDraw`），用于处理复杂的连线样式（如管道、流动效果、箭头等）。
+引擎内置了边渲染相关的通用工具（位于 `@fnt-agilejs/core/src/utils/edgeDraw`），用于处理复杂的连线样式（如管道、流动效果、箭头等）。
 
 :::
 
@@ -285,7 +285,7 @@ if (labelPos) {
 归一化边样式配置，解析 Pipeline、Flow 等高级样式。
 
 ```typescript
-import { getEdgeStyle } from '@agilejs/core/src/utils/edgeDraw';
+import { getEdgeStyle } from '@fnt-agilejs/core/src/utils/edgeDraw';
 
 const style = getEdgeStyle(edge, engine.graph);
 // style 包含归一化后的 stroke, lineWidth, pipeline, flow 等配置
@@ -295,7 +295,7 @@ const style = getEdgeStyle(edge, engine.graph);
 绘制路径，支持普通、Pipeline、Flow 模式。
 
 ```typescript
-import { drawEdgePath } from '@agilejs/core/src/utils/edgeDraw';
+import { drawEdgePath } from '@fnt-agilejs/core/src/utils/edgeDraw';
 
 // 在 canvas 上绘制
 drawEdgePath(ctx, path2D, style);
@@ -305,7 +305,7 @@ drawEdgePath(ctx, path2D, style);
 绘制箭头（实心/空心）。
 
 ```typescript
-import { drawArrow } from '@agilejs/core/src/utils/edgeDraw';
+import { drawArrow } from '@fnt-agilejs/core/src/utils/edgeDraw';
 
 drawArrow(ctx, tipPoint, angle, 'solid', 8, '#333', 2);
 ```
@@ -314,7 +314,7 @@ drawArrow(ctx, tipPoint, angle, 'solid', 8, '#333', 2);
 构建带圆角的路径。
 
 ```typescript
-import { buildRoundedPath } from '@agilejs/core/src/utils/edgeDraw';
+import { buildRoundedPath } from '@fnt-agilejs/core/src/utils/edgeDraw';
 
 const path = buildRoundedPath(points, 5); // 半径为 5 的圆角
 ```
@@ -322,7 +322,7 @@ const path = buildRoundedPath(points, 5); // 半径为 5 的圆角
 #### 辅助计算
 
 ```typescript
-import { getNodeStrokeGap, getGapPoints } from '@agilejs/core/src/utils/edgeDraw';
+import { getNodeStrokeGap, getGapPoints } from '@fnt-agilejs/core/src/utils/edgeDraw';
 
 // 计算节点描边带来的间隙（用于端点缩进）
 const gap = getNodeStrokeGap(engine.graph, 'node-1');
@@ -335,7 +335,7 @@ const newPoint = getGapPoints(p1, p2, gap);
 
 :::info
 
-引擎内置了 `PointerEventAdapter`（位于 `@agilejs/core/src/utils/pointer`），用于统一处理鼠标和触摸事件。
+引擎内置了 `PointerEventAdapter`（位于 `@fnt-agilejs/core/src/utils/pointer`），用于统一处理鼠标和触摸事件。
 
 :::
 
@@ -343,7 +343,7 @@ const newPoint = getGapPoints(p1, p2, gap);
 统一的指针事件适配器，支持鼠标和触摸。
 
 ```typescript
-import { PointerEventAdapter } from '@agilejs/core/src/utils/pointer';
+import { PointerEventAdapter } from '@fnt-agilejs/core/src/utils/pointer';
 
 canvas.addEventListener('mousedown', handlePointerDown);
 canvas.addEventListener('touchstart', handlePointerDown);
@@ -366,7 +366,7 @@ function handlePointerDown(e: MouseEvent | TouchEvent) {
 
 :::info
 
-引擎提供了选择相关的工具函数（`selectOnly`, `selectAdd`, `selectNone`），位于 `@agilejs/core/src/utils/selection`。图算法相关的方法为扩展示例。
+引擎提供了选择相关的工具函数（`selectOnly`, `selectAdd`, `selectNone`），位于 `@fnt-agilejs/core/src/utils/selection`。图算法相关的方法为扩展示例。
 
 :::
 
@@ -374,7 +374,7 @@ function handlePointerDown(e: MouseEvent | TouchEvent) {
 选择相关工具函数。
 
 ```typescript
-import { selectOnly, selectAdd, selectNone } from '@agilejs/core/src/utils/selection';
+import { selectOnly, selectAdd, selectNone } from '@fnt-agilejs/core/src/utils/selection';
 
 // 仅选中指定节点（清除其他选择）
 selectOnly(engine.graph, ['node-1', 'node-2']);
@@ -536,7 +536,7 @@ if (sorted) {
 引擎提供了内置的序列化方法。
 
 ```typescript
-import { toScene, fromScene } from '@agilejs/core';
+import { toScene, fromScene } from '@fnt-agilejs/core';
 
 // 序列化：将图形数据转换为 JSON
 const sceneData = toScene(engine.graph);
@@ -630,7 +630,7 @@ nodes.forEach(node => {
 engine.history.endTransaction();
 
 // 或使用 MoveNodeCommand
-import { MoveNodeCommand } from '@agilejs/core';
+import { MoveNodeCommand } from '@fnt-agilejs/core';
 
 engine.history.beginTransaction();
 nodes.forEach(node => {
@@ -791,7 +791,7 @@ engine.plugins.use(new CustomPlugin());
 #### 封装通用操作
 
 ```typescript
-import { MoveNodeCommand } from '@agilejs/core';
+import { MoveNodeCommand } from '@fnt-agilejs/core';
 
 class GraphOperations {
   constructor(private engine: CanvasEngine) {}
@@ -998,7 +998,7 @@ A: 使用 `useEffect` 初始化引擎，在 cleanup 函数中销毁。详见 [Re
 
 ```typescript
 import { useEffect, useRef } from 'react';
-import { CanvasEngine } from '@agilejs/core';
+import { CanvasEngine } from '@fnt-agilejs/core';
 
 function GraphEditor() {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -1035,7 +1035,7 @@ function GraphEditor() {
 
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted } from 'vue';
-import { CanvasEngine } from '@agilejs/core';
+import { CanvasEngine } from '@fnt-agilejs/core';
 
 const containerRef = ref<HTMLElement | null>(null);
 let engine: CanvasEngine | null = null;

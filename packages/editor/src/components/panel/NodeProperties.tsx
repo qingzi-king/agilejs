@@ -8,13 +8,13 @@ import React from 'react'
 import Field from './Field'
 import LineDashField from './LineDashField'
 import { nodeFieldSchemas, groupSchemas } from './schema'
-import type { CanvasEngine } from '@agilejs/core'
+import type { CanvasEngine } from '@fnt-agilejs/core'
 import {
   bringNodesToFront,
   sendNodesToBack,
   moveNodesUp,
   moveNodesDown
-} from '@agilejs/core/src/commands/GraphCommands'
+} from '@fnt-agilejs/core/src/commands/GraphCommands'
 
 export interface NodeDraftSingle {
   id: string
