@@ -485,13 +485,13 @@ const CanvasEditor: React.FC = () => {
   const handleEvent = () => {
     const engine = engineRef.current;
     if (!engine) return;
-    
-    engine.enablePerformanceMonitor(true);
-    setInterval(() => {
-      // 获取性能数据
-      const stats = engine.getPerformanceStats();
-      console.log('monitor:', stats);
-    }, 500);
+
+    // engine.enablePerformanceMonitor(true);
+    // setInterval(() => {
+    //   // 获取性能数据
+    //   const stats = engine.getPerformanceStats();
+    //   console.log('monitor:', stats);
+    // }, 500);
 
     // 尝试获取所有可监听事件名（engine.events._events 结构为 Map/Record）
     // const eventNames = Array.isArray((engine.events as any)._events)
