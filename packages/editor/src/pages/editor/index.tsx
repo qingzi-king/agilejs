@@ -145,6 +145,9 @@ const CanvasEditor: React.FC = () => {
         enableDrag: true, // 允许拖拽
         minScale: 0.1, // 最小缩放比例
         maxScale: 10 // 最大缩放比例
+      },
+      dprDegradation: {
+        enabled: false // 非Retina屏可关闭DPR降质，否则拖动节点或平移画布时可能出现模糊
       }
     })
     engineRef.current = engine
