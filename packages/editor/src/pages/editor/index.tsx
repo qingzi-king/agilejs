@@ -531,7 +531,7 @@ const CanvasEditor: React.FC = () => {
     blinkRef.current?.stopAll()
     const data = exampleMap[key]
     if (!data) return // 清空现有图（使用公开 API，避免缓存不同步导致上次 edges 残留）
-    ;(engine.graph as any).clear?.()
+    engine.graph.clear()
     // 生成型示例：根据 meta 规则动态造数
     if ((data as any).meta?.type === 'generated') {
       const meta = (data as any).meta

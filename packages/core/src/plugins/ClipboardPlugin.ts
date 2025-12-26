@@ -521,7 +521,7 @@ export class ClipboardPlugin implements Plugin {
             hist.rollbackTransaction();
           } catch {}
           // 回退：直接添加
-          (this.engine.graph as any).addNode(node);
+          this.engine.graph.addNode(node);
           this.engine.graph.markDirty();
           const tEnd = typeof performance !== "undefined" ? performance.now() : Date.now();
           this.engine.events.emit("clipboard:image-processing-end", {
@@ -534,7 +534,7 @@ export class ClipboardPlugin implements Plugin {
           });
         }
       } else {
-        (this.engine.graph as any).addNode(node);
+        this.engine.graph.addNode(node);
         this.engine.graph.markDirty();
         const tEnd = typeof performance !== "undefined" ? performance.now() : Date.now();
         this.engine.events.emit("clipboard:image-processing-end", {

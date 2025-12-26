@@ -16,12 +16,14 @@ export class PortOverlayPlugin implements Plugin {
 
   setup(engine: CanvasEngine): void {
     this.engine = engine;
-    const c = engine.canvas;
-    c.addEventListener("mousemove", this.onMouseMove);
+    // Use window mousemove so hover state updates during drags
+    window.addEventListener("mousemove", this.onMouseMove);
+    engine.canvas.addEventListener("mouseleave", this.onMouseLeave);
   }
 
   dispose(): void {
-    this.engine.canvas.removeEventListener("mousemove", this.onMouseMove);
+    window.removeEventListener("mousemove", this.onMouseMove);
+    this.engine.canvas.removeEventListener("mouseleave", this.onMouseLeave);
   }
 
   private onMouseMove = (e: MouseEvent) => {
@@ -32,7 +34,19 @@ export class PortOverlayPlugin implements Plugin {
       scale: this.engine.getScale(),
       pixelThresholdPx: 10,
     });
-    this.hoverNodeId = hit?.id ?? null;
+    const next = hit?.id ?? null;
+    if (next !== this.hoverNodeId) {
+      this.hoverNodeId = next;
+      // demand-render mode: hover overlay needs an explicit repaint
+      this.engine.requestRender();
+    }
+  };
+
+  private onMouseLeave = () => {
+    if (this.hoverNodeId != null) {
+      this.hoverNodeId = null;
+      this.engine.requestRender();
+    }
   };
 
   afterRender(ctx: CanvasRenderingContext2D): void {

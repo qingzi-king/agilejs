@@ -509,6 +509,8 @@ export class EdgeEditPlugin implements Plugin {
       this.hovered = null;
       this.dragging = null;
       this.draggingEndpoint = null;
+      // transient overlays may need a repaint even if selection didn't change
+      this.engine.requestRender();
       if (changed) {
         this.engine.graph.markDirty(); // 确保取消选中后立即重绘（清除高亮颜色）
         this.engine.events.emit("graph:change", { reason: "edge-selection-cleared" });
@@ -592,6 +594,7 @@ export class EdgeEditPlugin implements Plugin {
     // 4) 拖动端点以重连到其他锚点（仅当没有选中节点时允许）
     if ((hit.kind === "source" || hit.kind === "target") && !hasSelectedNode) {
       this.draggingEndpoint = { edgeId: edge.id, kind: hit.kind, pt: { x: world.x, y: world.y } };
+      this.engine.requestRender();
       e.stopPropagation();
       e.preventDefault();
       return;
@@ -627,6 +630,11 @@ export class EdgeEditPlugin implements Plugin {
     const rect = this.engine.canvas.getBoundingClientRect();
     const screen = { x: e.clientX - rect.left, y: e.clientY - rect.top };
     const world = this.engine.toWorld(screen);
+
+    const prevHoveredKey = this.hovered ? `${this.hovered.edgeId}:${this.hovered.kind}:${(this.hovered as any).index ?? -1}` : "";
+    const prevOrthoKey = this.hoveredOrthogonalSegment
+      ? `${this.hoveredOrthogonalSegment.edgeId}:${this.hoveredOrthogonalSegment.iStart}-${this.hoveredOrthogonalSegment.iEnd}`
+      : "";
 
     this.hovered = this.hitTest(world, false);
 
@@ -769,6 +777,8 @@ export class EdgeEditPlugin implements Plugin {
       this.draggingEndpoint.pt = { x: world.x, y: world.y };
       const c = this.engine.canvas;
       c.style.cursor = "grabbing";
+      // demand-render mode: endpoint preview is transient and must request repaint
+      this.engine.requestRender();
       // 允许事件继续冒泡，这样 PortOverlayPlugin 等仍可根据鼠标位置显示锚点/高亮
       e.preventDefault();
       return;
@@ -798,6 +808,15 @@ export class EdgeEditPlugin implements Plugin {
     // 但如果有节点选中且命中的是端点，则不拦截（让 ResizeRotatePlugin 处理）
     if (this.hovered && !(hasSelectedNode && (this.hovered.kind === "source" || this.hovered.kind === "target"))) {
       e.stopPropagation();
+    }
+
+    // demand-render mode: hover feedback (handles/highlight) needs explicit repaint
+    const nextHoveredKey = this.hovered ? `${this.hovered.edgeId}:${this.hovered.kind}:${(this.hovered as any).index ?? -1}` : "";
+    const nextOrthoKey = this.hoveredOrthogonalSegment
+      ? `${this.hoveredOrthogonalSegment.edgeId}:${this.hoveredOrthogonalSegment.iStart}-${this.hoveredOrthogonalSegment.iEnd}`
+      : "";
+    if (nextHoveredKey !== prevHoveredKey || nextOrthoKey !== prevOrthoKey) {
+      this.engine.requestRender();
     }
   };
 
@@ -905,6 +924,8 @@ export class EdgeEditPlugin implements Plugin {
       this.draggingEndpoint = null;
       // 恢复指针
       this.engine.canvas.style.cursor = "default";
+      // clear ghost preview in demand-render mode
+      this.engine.requestRender();
     }
   };
 
@@ -953,6 +974,7 @@ export class EdgeEditPlugin implements Plugin {
       this.hovered = null;
       this.dragging = null;
       this.draggingEndpoint = null;
+      this.engine.requestRender();
       if (changed) {
         this.engine.graph.markDirty();
         this.engine.events.emit("graph:change", { reason: "edge-selection-cleared" });
@@ -1019,6 +1041,7 @@ export class EdgeEditPlugin implements Plugin {
     }
     if ((hit.kind === "source" || hit.kind === "target") && !hasSelectedNode) {
       this.draggingEndpoint = { edgeId: edge.id, kind: hit.kind, pt: { x: world.x, y: world.y } };
+      this.engine.requestRender();
       e.preventDefault();
       e.stopPropagation();
       return;

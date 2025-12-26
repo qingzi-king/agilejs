@@ -42,7 +42,8 @@ export class ConnectPlugin implements Plugin {
 
   dispose(): void {
     const c = this.engine.canvas;
-    c.removeEventListener("mousedown", this.onMouseDown);
+    // must match the capture flag used in addEventListener
+    c.removeEventListener("mousedown", this.onMouseDown, true);
     window.removeEventListener("mousemove", this.onMouseMove);
     window.removeEventListener("mouseup", this.onMouseUp);
   }
@@ -95,6 +96,8 @@ export class ConnectPlugin implements Plugin {
     this.sourceNodeId = hit.id;
     this.sourcePortId = p.id;
     this.temp = world;
+    // transient preview state changed; request a frame in demand-render mode
+    this.engine.requestRender();
     // prevent selection/drag handlers
     e.preventDefault();
     e.stopPropagation();
@@ -105,6 +108,8 @@ export class ConnectPlugin implements Plugin {
     const rect = this.engine.canvas.getBoundingClientRect();
     const screen = { x: e.clientX - rect.left, y: e.clientY - rect.top };
     this.temp = this.engine.toWorld(screen);
+    // update preview line while dragging
+    this.engine.requestRender();
   };
 
   private onMouseUp = (e: MouseEvent) => {
@@ -160,6 +165,9 @@ export class ConnectPlugin implements Plugin {
     }
     this.sourceNodeId = this.sourcePortId = null;
     this.temp = null;
+
+    // clear preview immediately
+    this.engine.requestRender();
     e.preventDefault();
     e.stopPropagation();
   };
