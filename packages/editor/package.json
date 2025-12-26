@@ -6,7 +6,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite serve --mode development",
-    "pro": "vite build --mode production",
+    "build": "vite build --mode production",
     "deploy": "vite build --mode production && ./deploy/production.sh",
     "serve": "vite preview",
     "lint": "eslint --ext .js,.jsx,.ts,.tsx --fix --quiet src/",
