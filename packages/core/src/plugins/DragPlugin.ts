@@ -6,7 +6,6 @@
  */
 import type { CanvasEngine } from "../core/CanvasEngine";
 import { Plugin } from "./Plugin";
-import { hitTestNodes } from "../utils/hittest";
 import { MoveNodeCommand, MoveNodesCommand, UpdateNodePropsCommand, SetZIndexCommand } from "../commands/GraphCommands";
 import { GuidesPlugin } from "./GuidesPlugin";
 import { SetEdgePointsCommand } from "../commands/GraphCommands";
@@ -127,7 +126,7 @@ export class DragPlugin implements Plugin {
     const screen = { x: e.clientX - rect.left, y: e.clientY - rect.top };
     const world = this.engine.toWorld(screen);
     const nodes = this.engine.graph.getNodes();
-    const hit = hitTestNodes(world, nodes, { scale: this.engine.getScale(), pixelThresholdPx: 10 });
+    const hit = this.engine.pickNodeAtWorld(world, { scale: this.engine.getScale(), pixelThresholdPx: 10 });
     if (hit) {
       // 不可选：直接忽略交互
       if ((hit as any).selectable === false) return;
@@ -538,7 +537,7 @@ export class DragPlugin implements Plugin {
     const screen = { x: touch.clientX - rect.left, y: touch.clientY - rect.top };
     const world = this.engine.toWorld(screen);
     const nodes = this.engine.graph.getNodes();
-    const hit = hitTestNodes(world, nodes, { scale: this.engine.getScale(), pixelThresholdPx: 10 });
+    const hit = this.engine.pickNodeAtWorld(world, { scale: this.engine.getScale(), pixelThresholdPx: 10 });
 
     if (hit) {
       // 清除边的选中状态

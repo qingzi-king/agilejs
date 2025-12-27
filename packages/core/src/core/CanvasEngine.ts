@@ -183,6 +183,9 @@ export class CanvasEngine {
   private isPanning = false; // 是否处于平移中（用于降质渲染）
   private isDraggingNodes = false; // 是否处于节点拖动中（用于降质渲染）
   private draggingNodeCount = 0; // 当前拖拽的节点数量
+
+  // DPR 恢复的延迟定时器：避免短时间内频繁切换造成卡顿
+  private _restoreDprTimer: number | null = null;
   // viewport
   private scale = 1;
   private translateX = 0;
@@ -348,6 +351,11 @@ export class CanvasEngine {
     this.attachDefaultEvents();
     this.attachGraphEvents();
 
+    // 外部/插件侧常以 engine.events.emit('graph:change'/'graph:selection-change') 表达“需要重绘”，
+    // 但这类变更不一定会 bump Graph.renderVersion（例如仅修改 selected）。这里统一转成按需重绘标记。
+    this.events.on("graph:change", () => this.requestRender());
+    this.events.on("graph:selection-change", () => this.requestRender());
+
     // 监听容器尺寸变化，自动适配父级节点大小
     if (typeof ResizeObserver !== "undefined") {
       this.resizeObserver = new ResizeObserver(() => {
@@ -359,7 +367,7 @@ export class CanvasEngine {
     }
   }
 
-  resize(width: number, height: number, forceDpr?: number): void {
+  resize(width: number, height: number, forceDpr?: number, immediateRender: boolean = true): void {
     const nativeDpr = window.devicePixelRatio || 1;
     const dpr = forceDpr ?? nativeDpr;
     this._effectiveDpr = dpr;
@@ -386,8 +394,14 @@ export class CanvasEngine {
       // 尺寸变化使快照失效
       this.edgesSnapshot = null;
     }
-    // 立刻渲染一帧，避免因尺寸变化导致的瞬时空白（闪动）
-    this.render(performance.now());
+
+    // 默认立刻渲染一帧，避免因尺寸变化导致的瞬时空白（闪动）。
+    // 对于 DPR 降级/恢复等高频交互切换，可传 immediateRender=false，改为下一帧按需渲染，避免阻塞事件回调。
+    if (immediateRender || !this.running) {
+      this.render(performance.now());
+    } else {
+      this.requestRender();
+    }
     this.events.emit("engine:resize", { width, height });
   }
   
@@ -408,7 +422,8 @@ export class CanvasEngine {
     // 如果当前是拖动模式且已经在更低的 DPR，保持不变
     if (mode === 'pan' && this._effectiveDpr <= this._dprDegradeDragTarget) return;
     
-    this.resize(this._cssWidth, this._cssHeight, finalTarget);
+    // 交互期切 DPR 不要同步 render，避免卡住触摸/鼠标事件回调
+    this.resize(this._cssWidth, this._cssHeight, finalTarget, false);
   }
   
   /**
@@ -417,7 +432,8 @@ export class CanvasEngine {
   private switchToNativeDpr(): void {
     const nativeDpr = window.devicePixelRatio || 1;
     if (this._effectiveDpr === nativeDpr) return;  // 已经是原生 DPR
-    this.resize(this._cssWidth, this._cssHeight, nativeDpr);
+    // 恢复 DPR 也不要同步 render，避免抬手瞬间卡顿
+    this.resize(this._cssWidth, this._cssHeight, nativeDpr, false);
   }
 
   start(): void {
@@ -813,7 +829,18 @@ export class CanvasEngine {
         this._cachedTotalNodes >= this.aggressiveTotalNodes || this._cachedTotalEdges >= this.aggressiveTotalEdges;
 
       if (isHugeScene) {
-        // 大规模平移：清空边层，停止平移时会重建
+        // 大规模平移：优先复用上一帧快照并按平移 delta 平移绘制（非常便宜），
+        // 避免“平移时边层空白”以及“平移结束后第一下交互才触发重建”的体感问题。
+        if (this.edgesSnapshot && this.edgesSnapshot.graphVersion === gv && this.edgesSnapshot.scale === this.scale) {
+          const dx = this.translateX - this.edgesSnapshot.translateX;
+          const dy = this.translateY - this.edgesSnapshot.translateY;
+          const dpr2 = this._effectiveDpr || 1;
+          const cssW2 = this.canvas.width / dpr2;
+          const cssH2 = this.canvas.height / dpr2;
+          this.ctx.drawImage(eCanvas, dx, dy, cssW2, cssH2);
+          return;
+        }
+        // 没有可复用快照：维持原策略（不绘制边），停止平移时会重建
         ect.clearRect(0, 0, cssW, cssH);
         this.edgesSnapshot = null;
         return;
@@ -824,7 +851,17 @@ export class CanvasEngine {
       const heavy = visibleNodes > this.dragRenderNodesMax || visibleEdges > this.dragRenderEdgesMax;
 
       if (heavy) {
-        // 可视区域较多：清空边层
+        // 可视区域较多：同样尝试复用快照平移绘制
+        if (this.edgesSnapshot && this.edgesSnapshot.graphVersion === gv && this.edgesSnapshot.scale === this.scale) {
+          const dx = this.translateX - this.edgesSnapshot.translateX;
+          const dy = this.translateY - this.edgesSnapshot.translateY;
+          const dpr2 = this._effectiveDpr || 1;
+          const cssW2 = this.canvas.width / dpr2;
+          const cssH2 = this.canvas.height / dpr2;
+          this.ctx.drawImage(eCanvas, dx, dy, cssW2, cssH2);
+          return;
+        }
+        // 无快照：清空边层
         ect.clearRect(0, 0, cssW, cssH);
         this.edgesSnapshot = null;
         return;
@@ -1171,14 +1208,33 @@ export class CanvasEngine {
   // 交互状态：平移中
   setPanning(flag: boolean): void { 
     const wasInteracting = this.isPanning || this.isDraggingNodes;
+    const wasPanning = this.isPanning;
     this.isPanning = flag;
     const isInteracting = this.isPanning || this.isDraggingNodes;
+
+    // 交互状态切换时保证至少触发一次按需重绘：
+    // - 解决“大量节点下平移后边层保持空白，直到下一次交互才渲染”的问题
+    // - 也让“抬手后第一帧”承担边快照重建，避免拖到首次点击才重建导致点击显慢
+    if (wasPanning !== flag) this.requestRender();
+
+    // 任一交互开始：取消待恢复 DPR
+    if (flag && this._restoreDprTimer != null) {
+      clearTimeout(this._restoreDprTimer);
+      this._restoreDprTimer = null;
+    }
     
     // DPR 动态降级：平移使用较高 DPR 减少模糊
     if (flag && !wasInteracting) {
       this.switchToLowDpr('pan');
     } else if (!isInteracting && wasInteracting) {
-      this.switchToNativeDpr();
+      // 交互结束：延迟恢复，避免“快速滑动/抬手/再滑动”导致频繁 resize 抖动
+      if (this._restoreDprTimer != null) clearTimeout(this._restoreDprTimer);
+      this._restoreDprTimer = window.setTimeout(() => {
+        this._restoreDprTimer = null;
+        // 若期间又进入交互，则不恢复
+        if (this.isPanning || this.isDraggingNodes) return;
+        this.switchToNativeDpr();
+      }, 120);
     }
   }
   isCurrentlyPanning(): boolean { return this.isPanning; }
@@ -1189,11 +1245,23 @@ export class CanvasEngine {
 
     this.draggingNodeCount = count;
     const isInteracting = this.isPanning || this.isDraggingNodes;
+
+    if (wasDragging !== flag) this.requestRender();
+
+    if (flag && this._restoreDprTimer != null) {
+      clearTimeout(this._restoreDprTimer);
+      this._restoreDprTimer = null;
+    }
     // DPR 动态降级：拖动节点使用较低 DPR 优先流畅
     if (flag && !wasDragging) {
       this.switchToLowDpr('drag');
     } else if (!isInteracting && wasInteracting) {
-      this.switchToNativeDpr();
+      if (this._restoreDprTimer != null) clearTimeout(this._restoreDprTimer);
+      this._restoreDprTimer = window.setTimeout(() => {
+        this._restoreDprTimer = null;
+        if (this.isPanning || this.isDraggingNodes) return;
+        this.switchToNativeDpr();
+      }, 120);
     }
   }
   isCurrentlyDraggingNodes(): boolean { return this.isDraggingNodes; }

@@ -6,7 +6,6 @@
  */
 import type { CanvasEngine } from "../core/CanvasEngine";
 import { Plugin } from "./Plugin";
-import { hitTestNodes } from "../utils/hittest";
 
 export interface SelectionOverlayOptions {
   /**
@@ -118,10 +117,7 @@ export class SelectionOverlayPlugin implements Plugin {
     const worldPos = this.engine.toWorld({ x: clientX - rect.left, y: clientY - rect.top });
 
     // 检查是否点击到了任何节点
-    const hitNode = hitTestNodes(worldPos, this.engine.graph.getNodes(), {
-      scale: this.engine.getScale(),
-      pixelThresholdPx: 10,
-    });
+    const hitNode = this.engine.pickNodeAtWorld(worldPos, { scale: this.engine.getScale(), pixelThresholdPx: 10 });
 
     // 如果没有点击到节点，则清除所有选择
     if (!hitNode) {
@@ -150,6 +146,9 @@ export class SelectionOverlayPlugin implements Plugin {
     }
 
     if (selectionChanged) {
+      // 选中态属于“样式变更”，必须触发渲染失效；仅 emit 事件不会 bump Graph.renderVersion
+      this.engine.graph.markDirty("style");
+      this.engine.requestRender();
       // 先触发更细粒度的 selectionChanged 事件，供外部属性面板等使用
       const selectedNodeIds: string[] = []; // 清空后为空
       const selectedEdgeIds: string[] = []; // 清空后为空

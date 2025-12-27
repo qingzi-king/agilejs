@@ -9,6 +9,7 @@ import { Graph } from "../model/Graph";
 export function selectOnly(graph: Graph, nodeIds: string[]): void {
   const set = new Set(nodeIds);
   graph.getNodes().forEach((n) => (n.selected = set.has(n.id)));
+  graph.markDirty("style");
 }
 
 export function selectAdd(graph: Graph, nodeIds: string[]): void {
@@ -16,8 +17,10 @@ export function selectAdd(graph: Graph, nodeIds: string[]): void {
   graph.getNodes().forEach((n) => {
     if (set.has(n.id)) n.selected = true;
   });
+  graph.markDirty("style");
 }
 
 export function selectNone(graph: Graph): void {
   graph.getNodes().forEach((n) => (n.selected = false));
+  graph.markDirty("style");
 }
