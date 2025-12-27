@@ -262,7 +262,16 @@ export class CanvasEngine {
   private _visibleEdgeCacheView = { minX: 0, minY: 0, maxX: 0, maxY: 0, scale: 1 };
 
   // 性能优化：拖拽时的特殊处理
-  private _lastDragSnapshot: HTMLCanvasElement | null = null;  // 拖拽前的边快照
+  private _lastDragSnapshot: HTMLCanvasElement | null = null; // 拖拽降质模式的背景边快照（屏幕空间，已排除被拖相关边）
+  private _dragSnapshotMeta: {
+    scale: number;
+    translateX: number;
+    translateY: number;
+    dpr: number;
+    cssW: number;
+    cssH: number;
+  } | null = null;
+  private _dragModeNodeIds: Set<string> | null = null;
   private _isDraggingModeActive = false;  // 拖拽降质模式激活标志
   private _cachedTotalNodes = 0;  // 缓存的节点总数
   private _cachedTotalEdges = 0;  // 缓存的边总数
@@ -274,6 +283,7 @@ export class CanvasEngine {
   private _lastRenderScale = 1;  // 上次渲染时的缩放
   private _lastRenderTranslateX = 0;  // 上次渲染时的平移X
   private _lastRenderTranslateY = 0;  // 上次渲染时的平移Y
+  private _wasInteractingLastFrame = false; // 上一帧是否处于交互态（用于交互结束兜底重绘）
   
   // 性能优化：动态 DPR（高 DPR 设备在交互时降级）
   private _effectiveDpr = 1;  // 当前生效的 DPR
@@ -443,6 +453,14 @@ export class CanvasEngine {
     const loop = (time: number) => {
       if (!this.running) return;
       this.animationHandle = requestAnimationFrame(loop);
+
+      // 交互结束兜底：上一帧还在平移/拖拽，但这一帧结束了。
+      // 在大图降质策略下（平移期可能清空边层），需要额外渲染一帧来恢复边快照，
+      // 否则可能出现“平移结束后边不出现，直到下一次 hover/点击才触发重绘”的体感问题。
+      const isInteractingNow = this.isDraggingNodes || this.isPanning;
+      if (!isInteractingNow && this._wasInteractingLastFrame) {
+        this._needsRender = true;
+      }
       
       // 按需渲染：检查是否真的需要重绘
       const currentVersion = this.graph.getRenderVersion();
@@ -477,6 +495,8 @@ export class CanvasEngine {
         this._lastRenderTranslateX = this.translateX;
         this._lastRenderTranslateY = this.translateY;
       }
+
+      this._wasInteractingLastFrame = isInteractingNow;
       
       this.animations.tick(time);
       this.events.emit("engine:tick", { time });
@@ -739,86 +759,158 @@ export class CanvasEngine {
     const cssW = this.canvas.width / dpr;
     const cssH = this.canvas.height / dpr;
 
-    // 性能优化：只在拖拽大批量节点时使用降质模式（>400个），平移时保持正常渲染
-    // 平移时边应该跟随移动（因为整个场景一起平移）
-    // 少量节点拖拽时边应该正常更新（因为边数量不多，重绘成本可控）
-    // 大批量节点拖拽时边可以冻结（因为会导致大量边重绘）
-    const shouldUseDragMode = this.isDraggingNodes && this.draggingNodeCount > 400;
+    // 动态效果检测与版本：用于决定是否允许“冻结/平移快照”等降质策略
+    const needDynamic = this.hasDynamicEdgeEffects();
+    const gv = this.graph.getVersion();
 
-    if (shouldUseDragMode && !this._isDraggingModeActive) {
-      // 进入拖拽降质模式：检查是否需要降质
-      // 性能优化：缓存节点和边的总数，避免重复调用 getNodes/getEdges
-      const gv = this.graph.getVersion();
+    // 拖拽时边渲染降质策略：
+    // - 以前仅在 draggingNodeCount>400 时触发，会导致“场景很大但只拖 1 个节点”时阈值不生效。
+    // - 这里改为：只要处于真实拖拽态（engine.setDraggingNodes(true)），就按可视节点/边数量判断是否需要冻结/跳过边。
+    //   由于 DragPlugin 已延迟到“发生实际位移”才 setDraggingNodes，因此不会再出现“仅点击选中就冻结边层”。
+    let dragHeavy = false;
+    if (this.isDraggingNodes) {
       if (this._cachedCountVersion !== gv) {
         this._cachedTotalNodes = this.graph.getNodes().length;
         this._cachedTotalEdges = this.graph.getEdges().length;
         this._cachedCountVersion = gv;
       }
-
-      // 激进降质：总数量超过阈值，直接跳过边渲染
       const isHugeScene =
         this._cachedTotalNodes >= this.aggressiveTotalNodes || this._cachedTotalEdges >= this.aggressiveTotalEdges;
-
       if (isHugeScene) {
-        // 大规模场景：完全跳过边渲染，清空边层
-        this._isDraggingModeActive = true;
+        dragHeavy = true;
+      } else {
+        const { visibleNodes, visibleEdges } = this.measureVisibleCounts(cssW, cssH);
+        dragHeavy = visibleNodes > this.dragRenderNodesMax || visibleEdges > this.dragRenderEdgesMax;
+      }
+    }
+
+    const shouldUseDragMode = this.isDraggingNodes && dragHeavy;
+
+    if (shouldUseDragMode && !this._isDraggingModeActive) {
+      // 进入拖拽降质模式：
+      // 重负载时采用“两层绘制”：
+      // 1) 背景边：一次性生成快照（排除被拖拽相关边），拖拽期间复用（可选按 delta 平移）。
+      // 2) 前景边：每帧仅重绘与被拖节点相连的边，保证跟随。
+      // 这样不会把无关边直接隐藏，同时仍然避免全量边每帧重建。
+      this._isDraggingModeActive = true;
+
+      // 记录拖拽节点集合（默认取 selected，通常包含被拖节点）
+      const selected = new Set<string>();
+      const ns = this.graph.getNodes();
+      for (let i = 0; i < ns.length; i++) {
+        if (ns[i].selected) selected.add(ns[i].id);
+      }
+      this._dragModeNodeIds = selected;
+
+      // 生成背景边快照（排除相关边）
+      const bg = document.createElement("canvas");
+      bg.width = eCanvas.width;
+      bg.height = eCanvas.height;
+      const bgCtx = bg.getContext("2d");
+      if (bgCtx) {
+        bgCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        bgCtx.save();
+        bgCtx.clearRect(0, 0, cssW, cssH);
+        bgCtx.translate(this.translateX, this.translateY);
+        bgCtx.scale(this.scale, this.scale);
+
+        // 可视区域裁剪与主渲染一致
+        const invScale = 1 / this.scale;
+        const viewMinX = -this.translateX * invScale;
+        const viewMinY = -this.translateY * invScale;
+        const viewMaxX = viewMinX + cssW * invScale;
+        const viewMaxY = viewMinY + cssH * invScale;
+
+        const es = this.graph.getEdges();
+        for (let i = 0; i < es.length; i++) {
+          const edge = es[i];
+          if (!this.edgeIntersectsView(edge, viewMinX, viewMinY, viewMaxX, viewMaxY)) continue;
+          if (selected.size > 0 && (selected.has(edge.source) || selected.has(edge.target))) continue;
+          const renderer = this.renderers.get(edge.shape);
+          renderer?.renderEdge(bgCtx, edge, this.graph);
+        }
+
+        bgCtx.restore();
+        this._lastDragSnapshot = bg;
+        this._dragSnapshotMeta = {
+          scale: this.scale,
+          translateX: this.translateX,
+          translateY: this.translateY,
+          dpr,
+          cssW,
+          cssH,
+        };
+      } else {
         this._lastDragSnapshot = null;
-        ect.clearRect(0, 0, cssW, cssH);
-        this.edgesSnapshot = null;
-        return;
+        this._dragSnapshotMeta = null;
       }
 
-      // 中等规模场景：检查可视区域数量
-      const { visibleNodes, visibleEdges } = this.measureVisibleCounts(cssW, cssH);
-      const heavy = visibleNodes > this.dragRenderNodesMax || visibleEdges > this.dragRenderEdgesMax;
-
-      if (heavy) {
-        // 可视数量较多：跳过边渲染
-        this._isDraggingModeActive = true;
-        this._lastDragSnapshot = null;
-        ect.clearRect(0, 0, cssW, cssH);
-        this.edgesSnapshot = null;
-        return;
-      } else if (this.edgesSnapshot) {
-        // 小规模场景：冻结当前快照，避免因节点移动导致的重绘
-        this._isDraggingModeActive = true;
-        if (!this._lastDragSnapshot) {
-          this._lastDragSnapshot = document.createElement("canvas");
-        }
-        this._lastDragSnapshot.width = eCanvas.width;
-        this._lastDragSnapshot.height = eCanvas.height;
-        const snapCtx = this._lastDragSnapshot.getContext("2d");
-        if (snapCtx) {
-          snapCtx.clearRect(0, 0, this._lastDragSnapshot.width, this._lastDragSnapshot.height);
-          snapCtx.drawImage(eCanvas, 0, 0);
-        }
-      }
+      // 正常边快照在拖拽结束后统一重建
+      this.edgesSnapshot = null;
     }
 
     if (!shouldUseDragMode && this._isDraggingModeActive) {
       // 退出拖拽降质模式：恢复正常渲染
       this._isDraggingModeActive = false;
       this._lastDragSnapshot = null;
+      this._dragSnapshotMeta = null;
+      this._dragModeNodeIds = null;
       this.edgesSnapshot = null; // 强制重建快照
     }
 
-    // 拖拽降质模式激活时：使用冻结的快照
+    // 拖拽降质模式激活时：背景边复用快照 + 前景仅重绘相关边，跳过全量边快照重建
     if (this._isDraggingModeActive) {
-      if (this._lastDragSnapshot) {
-        // 绘制冻结的快照（边的位置不会更新，保持拖拽前的状态）
+      // 1) 背景：绘制快照（必要时按平移 delta 修正）
+      if (this._lastDragSnapshot && this._dragSnapshotMeta && !needDynamic && this._dragSnapshotMeta.dpr === dpr && this._dragSnapshotMeta.scale === this.scale) {
+        const dx = this.translateX - this._dragSnapshotMeta.translateX;
+        const dy = this.translateY - this._dragSnapshotMeta.translateY;
         const dpr2 = this._effectiveDpr || 1;
         const cssW2 = this.canvas.width / dpr2;
         const cssH2 = this.canvas.height / dpr2;
-        this.ctx.drawImage(this._lastDragSnapshot, 0, 0, cssW2, cssH2);
+        this.ctx.drawImage(this._lastDragSnapshot, dx, dy, cssW2, cssH2);
       }
-      // 跳过所有快照更新逻辑
+
+      // 2) 前景：每帧仅绘制与被拖节点相连的边（保证跟随）
+      const selected = this._dragModeNodeIds;
+      if (selected && selected.size > 0) {
+        this.ctx.save();
+        this.ctx.translate(this.translateX, this.translateY);
+        this.ctx.scale(this.scale, this.scale);
+        const invScale = 1 / this.scale;
+        const viewMinX = -this.translateX * invScale;
+        const viewMinY = -this.translateY * invScale;
+        const viewMaxX = viewMinX + cssW * invScale;
+        const viewMaxY = viewMinY + cssH * invScale;
+        const es = this.graph.getEdges();
+        for (let i = 0; i < es.length; i++) {
+          const edge = es[i];
+          if (!this.edgeIntersectsView(edge, viewMinX, viewMinY, viewMaxX, viewMaxY)) continue;
+          if (!selected.has(edge.source) && !selected.has(edge.target)) continue;
+          const renderer = this.renderers.get(edge.shape);
+          renderer?.renderEdge(this.ctx, edge, this.graph);
+        }
+        this.ctx.restore();
+      }
+      // 跳过所有快照更新逻辑（避免重负载下每帧重建）
       return;
     }
 
     // 平移时的降质策略：对于大规模场景，临时清空边层
     if (this.isPanning) {
+      // 平移期优先复用“上一帧稳定快照”并按平移 delta 绘制：
+      // - 平移只改变 translate，不改变世界坐标下的边形状
+      // - 复用快照比每帧重建边层便宜得多
+      if (!needDynamic && this.edgesSnapshot && this.edgesSnapshot.graphVersion === gv && this.edgesSnapshot.scale === this.scale && this.edgesSnapshot.dpr === dpr) {
+        const dx = this.translateX - this.edgesSnapshot.translateX;
+        const dy = this.translateY - this.edgesSnapshot.translateY;
+        const dpr2 = this._effectiveDpr || 1;
+        const cssW2 = this.canvas.width / dpr2;
+        const cssH2 = this.canvas.height / dpr2;
+        this.ctx.drawImage(eCanvas, dx, dy, cssW2, cssH2);
+        return;
+      }
+
       // 性能优化：缓存总数（复用上面的逻辑）
-      const gv = this.graph.getVersion();
       if (this._cachedCountVersion !== gv) {
         this._cachedTotalNodes = this.graph.getNodes().length;
         this._cachedTotalEdges = this.graph.getEdges().length;
@@ -829,17 +921,6 @@ export class CanvasEngine {
         this._cachedTotalNodes >= this.aggressiveTotalNodes || this._cachedTotalEdges >= this.aggressiveTotalEdges;
 
       if (isHugeScene) {
-        // 大规模平移：优先复用上一帧快照并按平移 delta 平移绘制（非常便宜），
-        // 避免“平移时边层空白”以及“平移结束后第一下交互才触发重建”的体感问题。
-        if (this.edgesSnapshot && this.edgesSnapshot.graphVersion === gv && this.edgesSnapshot.scale === this.scale) {
-          const dx = this.translateX - this.edgesSnapshot.translateX;
-          const dy = this.translateY - this.edgesSnapshot.translateY;
-          const dpr2 = this._effectiveDpr || 1;
-          const cssW2 = this.canvas.width / dpr2;
-          const cssH2 = this.canvas.height / dpr2;
-          this.ctx.drawImage(eCanvas, dx, dy, cssW2, cssH2);
-          return;
-        }
         // 没有可复用快照：维持原策略（不绘制边），停止平移时会重建
         ect.clearRect(0, 0, cssW, cssH);
         this.edgesSnapshot = null;
@@ -851,16 +932,6 @@ export class CanvasEngine {
       const heavy = visibleNodes > this.dragRenderNodesMax || visibleEdges > this.dragRenderEdgesMax;
 
       if (heavy) {
-        // 可视区域较多：同样尝试复用快照平移绘制
-        if (this.edgesSnapshot && this.edgesSnapshot.graphVersion === gv && this.edgesSnapshot.scale === this.scale) {
-          const dx = this.translateX - this.edgesSnapshot.translateX;
-          const dy = this.translateY - this.edgesSnapshot.translateY;
-          const dpr2 = this._effectiveDpr || 1;
-          const cssW2 = this.canvas.width / dpr2;
-          const cssH2 = this.canvas.height / dpr2;
-          this.ctx.drawImage(eCanvas, dx, dy, cssW2, cssH2);
-          return;
-        }
         // 无快照：清空边层
         ect.clearRect(0, 0, cssW, cssH);
         this.edgesSnapshot = null;
@@ -870,8 +941,6 @@ export class CanvasEngine {
     }
 
     // 正常模式：原有的快照逻辑
-    const needDynamic = this.hasDynamicEdgeEffects();
-    const gv = this.graph.getVersion();
     const snapshotValid =
       this.edgesSnapshot &&
       !needDynamic &&

@@ -517,6 +517,10 @@ export class DragPlugin implements Plugin {
       this.edgePointsStart.clear();
       // 批量拖动降质渲染：结束
       this.engine.setDraggingNodes(false, 0);
+      // 兜底：确保拖拽结束后立即触发一次按需重绘（边层/快照重建依赖下一帧 render）
+      this.engine.requestRender();
+      // 兜底：确保触摸拖拽结束后立即触发一次按需重绘
+      this.engine.requestRender();
     }
   };
 

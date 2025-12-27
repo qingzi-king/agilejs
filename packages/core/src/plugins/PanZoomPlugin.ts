@@ -113,6 +113,8 @@ export class PanZoomPlugin implements Plugin {
   private onMouseUp = () => {
     this.panning = false;
     this.engine.setPanning(false);
+    // 兜底：确保松手后下一帧重绘（避免状态未切换/事件顺序导致边层未及时恢复）
+    this.engine.requestRender();
   };
 
   private onWheel = (e: WheelEvent) => {
@@ -160,6 +162,8 @@ export class PanZoomPlugin implements Plugin {
       // 双指缩放
       this.panning = false; // 取消平移
       this.engine.setPanning(false);
+      // 兜底：从平移切换到缩放时也强制触发一次重绘
+      this.engine.requestRender();
 
       this.pinching = true;
       this.initialPinchDistance = PointerEventAdapter.getPinchDistance(e)!;
@@ -211,6 +215,8 @@ export class PanZoomPlugin implements Plugin {
       this.panning = false;
       this.pinching = false;
       this.engine.setPanning(false);
+      // 兜底：确保抬手后下一帧重绘
+      this.engine.requestRender();
     } else if (e.touches.length === 1 && this.pinching) {
       // 从双指变为单指，结束缩放
       this.pinching = false;

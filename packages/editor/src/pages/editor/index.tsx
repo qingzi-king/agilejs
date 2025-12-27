@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unused-expressions */
 import React, { useEffect, useMemo, useRef, useState } from 'react'
 import Toolbar from '@/components/toolbar'
 import { createNodeByShape } from '@/config/nodeTemplates'
@@ -290,8 +289,8 @@ const CanvasEditor: React.FC = () => {
     // 绑定粘贴 loading 事件
     const onPasteStart = () => setPastingLoading(true)
     const onPasteEnd = () => setPastingLoading(false)
-    engine.events.on('clipboard:image-processing-start', onPasteStart)
-    engine.events.on('clipboard:image-processing-end', onPasteEnd)
+    offs.push(engine.events.on('clipboard:image-processing-start', onPasteStart))
+    offs.push(engine.events.on('clipboard:image-processing-end', onPasteEnd))
 
     // 监听选中变化，同步到 Store
     const onSelectionChanged = (payload: any) => {
@@ -302,7 +301,7 @@ const CanvasEditor: React.FC = () => {
       const edgeIds = edges.map((e: any) => (typeof e === 'string' ? e : e.id))
       updateSelection(nodeIds, edgeIds)
     }
-    engine.events.on('graph:selection-change', onSelectionChanged)
+    offs.push(engine.events.on('graph:selection-change', onSelectionChanged))
 
     // 允许左侧面板拖拽创建节点
     const containerEl = containerRef.current!
@@ -469,14 +468,6 @@ const CanvasEditor: React.FC = () => {
       engineRef.current = null
       setEngine(null)
       window.removeEventListener('keydown', onKey)
-      // 解绑 loading 事件
-      engine.events?.on && engine.events.on('noop', () => {}) // 保持空操作
-      engine.events &&
-        (engine.events as any)._events &&
-        delete (engine.events as any)._events?.['clipboard:image-processing-start']
-      engine.events &&
-        (engine.events as any)._events &&
-        delete (engine.events as any)._events?.['clipboard:image-processing-end']
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [exampleMap])
