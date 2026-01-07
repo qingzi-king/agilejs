@@ -735,6 +735,8 @@ export class GroupTransformCommand implements ICommand {
         });
       }
     }
+    // 结构已变更：需要让边快照/空间索引失效并触发重绘
+    this.graph.markDirty("structure");
   }
   undo(): void {
     for (const u of this.backup) {
@@ -752,6 +754,8 @@ export class GroupTransformCommand implements ICommand {
         });
       }
     }
+    // 结构已变更：需要让边快照/空间索引失效并触发重绘
+    this.graph.markDirty("structure");
   }
   debugInfo(): CommandDebugInfo {
     const changes: ChangeItem[] = this.backup.map((u) => ({
