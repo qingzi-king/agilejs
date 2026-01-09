@@ -183,6 +183,7 @@ export class CanvasEngine {
   private isPanning = false; // 是否处于平移中（用于降质渲染）
   private isDraggingNodes = false; // 是否处于节点拖动中（用于降质渲染）
   private draggingNodeCount = 0; // 当前拖拽的节点数量
+  private isResizingNodes = false; // 是否处于节点尺寸调整中（用于降质渲染）
 
   // DPR 恢复的延迟定时器：避免短时间内频繁切换造成卡顿
   private _restoreDprTimer: number | null = null;
@@ -478,14 +479,15 @@ export class CanvasEngine {
       // 2. 图版本变化
       // 3. 视口变化
       // 4. 有活跃动画或流动效果
-      // 5. 正在拖拽或平移（需要持续更新）
+      // 5. 正在拖拽、平移或调整尺寸（需要持续更新）
       const shouldRender = this._needsRender || 
                            graphChanged || 
                            viewportChanged || 
                            hasAnimations ||
                            hasDynamicEffects ||
                            this.isDraggingNodes ||
-                           this.isPanning;
+                           this.isPanning ||
+                           this.isResizingNodes;
       
       if (shouldRender) {
         this.render(time);
@@ -1335,6 +1337,36 @@ export class CanvasEngine {
   }
   isCurrentlyDraggingNodes(): boolean { return this.isDraggingNodes; }
   getDraggingNodeCount(): number { return this.draggingNodeCount; }
+  
+  /**
+   * 设置节点尺寸调整状态（用于 resize 期间的降质渲染优化）
+   * @param flag 是否正在调整尺寸
+   */
+  setResizingNodes(flag: boolean): void {
+    const wasResizing = this.isResizingNodes;
+    this.isResizingNodes = flag;
+    const isInteracting = this.isPanning || this.isDraggingNodes || this.isResizingNodes;
+    const wasInteracting = this.isPanning || this.isDraggingNodes || wasResizing;
+    
+    if (wasResizing !== flag) this.requestRender();
+    
+    if (flag && this._restoreDprTimer != null) {
+      clearTimeout(this._restoreDprTimer);
+      this._restoreDprTimer = null;
+    }
+    // DPR 动态降级：resize 使用较低 DPR 优先流畅
+    if (flag && !wasResizing) {
+      this.switchToLowDpr('drag');
+    } else if (!isInteracting && wasInteracting) {
+      if (this._restoreDprTimer != null) clearTimeout(this._restoreDprTimer);
+      this._restoreDprTimer = window.setTimeout(() => {
+        this._restoreDprTimer = null;
+        if (this.isPanning || this.isDraggingNodes || this.isResizingNodes) return;
+        this.switchToNativeDpr();
+      }, 120);
+    }
+  }
+  isCurrentlyResizingNodes(): boolean { return this.isResizingNodes; }
   
   /**
    * 获取画布的 CSS 尺寸（与 DPR 无关）

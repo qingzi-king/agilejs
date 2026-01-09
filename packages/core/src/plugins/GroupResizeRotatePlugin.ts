@@ -314,6 +314,8 @@ export class GroupResizeRotatePlugin implements Plugin {
 
     e.stopPropagation();
     e.preventDefault();
+    // 通知引擎开始 resize（用于降质渲染优化）
+    this.engine.setResizingNodes(true);
     // 事件：组交互开始（resize/rotate）
     const ids = this.nodeStarts.map((s) => s.id);
     if (this.active === HandleType.Rotate) {
@@ -609,6 +611,8 @@ export class GroupResizeRotatePlugin implements Plugin {
     } else {
       this.engine.events.emit("group:resize-end" as any, { nodeIds: ids, updates, handle: this.active });
     }
+    // 通知引擎结束 resize（用于降质渲染优化）
+    this.engine.setResizingNodes(false);
     this.active = HandleType.None;
     this.nodeStarts = [];
     if (this.previewAngleDelta != null) {
@@ -662,6 +666,8 @@ export class GroupResizeRotatePlugin implements Plugin {
       }));
     e.stopPropagation();
     e.preventDefault();
+    // 通知引擎开始 resize（用于降质渲染优化）
+    this.engine.setResizingNodes(true);
     const ids = this.nodeStarts.map((s) => s.id);
     if (this.active === HandleType.Rotate) {
       this.engine.events.emit("group:rotate-start" as any, {
@@ -716,7 +722,8 @@ export class GroupResizeRotatePlugin implements Plugin {
         deltaRad: delta,
         center: { ...this.startCenter },
       });
-      this.engine.graph.markDirty();
+      // 使用 'style' 模式避免触发边快照重建和四叉树重建（resize 预览期间的性能优化）
+      this.engine.graph.markDirty("style");
       e.preventDefault();
       return;
     }
@@ -843,7 +850,8 @@ export class GroupResizeRotatePlugin implements Plugin {
         scale: { sx, sy },
         angleRad: rad,
       });
-      this.engine.graph.markDirty();
+      // 使用 'style' 模式避免触发边快照重建和四叉树重建（resize 预览期间的性能优化）
+      this.engine.graph.markDirty("style");
     }
     e.preventDefault();
   };

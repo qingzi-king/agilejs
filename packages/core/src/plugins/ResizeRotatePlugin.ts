@@ -477,6 +477,8 @@ export class ResizeRotatePlugin implements Plugin {
           // 阻止事件传播，防止触发其他插件
           e.stopPropagation();
           e.preventDefault();
+          // 通知引擎开始 resize（用于降质渲染优化）
+          this.engine.setResizingNodes(true);
           // 事件：开始（旋转/缩放）
           if (this.activeHandle === HandleType.Rotate) {
             this.engine.events.emit("node:rotate-start", {
@@ -884,6 +886,8 @@ export class ResizeRotatePlugin implements Plugin {
       }
     }
 
+    // 通知引擎结束 resize（无论是否有实际操作，都应重置状态）
+    this.engine.setResizingNodes(false);
     this.activeHandle = HandleType.None;
     this.activeNodeId = null;
     this.aspectLockAxis = null;
@@ -935,6 +939,8 @@ export class ResizeRotatePlugin implements Plugin {
           }
           e.stopPropagation();
           e.preventDefault();
+          // 通知引擎开始 resize（用于降质渲染优化）
+          this.engine.setResizingNodes(true);
           if (this.activeHandle === HandleType.Rotate) {
             this.engine.events.emit("node:rotate-start", {
               nodeId: this.activeNodeId,
@@ -1094,7 +1100,8 @@ export class ResizeRotatePlugin implements Plugin {
         });
       }
       this.updateCursor(true);
-      if (this.engine.graph) this.engine.graph.markDirty();
+      // 使用 'style' 模式避免触发边快照重建和四叉树重建（resize 预览期间的性能优化）
+      if (this.engine.graph) this.engine.graph.markDirty("style");
     }
     e.preventDefault();
   };
