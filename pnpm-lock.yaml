@@ -90,6 +90,9 @@ importers:
       react-router-dom:
         specifier: 7.5.2
         version: 7.5.2(react-dom@19.2.0(react@19.2.0))(react@19.2.0)
+      stats.js:
+        specifier: ^0.17.0
+        version: 0.17.0
       tailwindcss:
         specifier: ^4.1.4
         version: 4.1.17
@@ -6471,6 +6474,9 @@ packages:
   srcset@4.0.0:
     resolution: {integrity: sha512-wvLeHgcVHKO8Sc/H/5lkGreJQVeYMm9rlmt8PuR1xE31rIuXhuzznUUqAt8MqLhB3MqJdFzlNAfpcWnxiFUcPw==}
     engines: {node: '>=12'}
+
+  stats.js@0.17.0:
+    resolution: {integrity: sha512-hNKz8phvYLPEcRkeG1rsGmV5ChMjKDAWU7/OJJdDErPBNChQXxCo3WZurGpnWc6gZhAzEPFad1aVgyOANH1sMw==}
 
   statuses@1.5.0:
     resolution: {integrity: sha512-OpZ3zP+jT1PI7I8nemJX4AKmAX070ZkYPVWV/AaKTJl+tXCTGyVdC1a4SL8RUQYEwk/f34ZX8UTykN68FwrqAA==}
@@ -15256,6 +15262,8 @@ snapshots:
   sprintf-js@1.0.3: {}
 
   srcset@4.0.0: {}
+
+  stats.js@0.17.0: {}
 
   statuses@1.5.0: {}
 

@@ -1,4 +1,15 @@
 /// <reference types="vite/client" />
+
+declare module 'stats.js' {
+  export default class Stats {
+    dom: HTMLElement
+    showPanel(panel: number): void
+    begin(): void
+    end(): void
+    update(): void
+  }
+}
+
 interface ImportMetaEnv {
   /** 接口请求地址 */
   VITE_APP_SERVER_HOST: string

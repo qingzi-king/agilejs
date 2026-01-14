@@ -2,12 +2,13 @@
  * @Description: 调试工具
  * @Author: qingzi.wang
  * @Date: 2025-10-17 15:57:28
- * @LastEditTime: 2025-11-22 11:24:21
+ * @LastEditTime: 2026-01-14 17:04:32
  */
 import React from 'react'
 import Tooltip from '@/components/common/Tooltip'
 import Modal from '@/components/common/Modal'
 import message from '@/components/common/Message'
+import mod from 'stats.js'
 import debugSvg from '@/assets/images/debug.svg'
 import { toScene, fromScene } from '@fnt-agilejs/core'
 import type { CanvasEngine } from '@fnt-agilejs/core'
@@ -18,6 +19,67 @@ interface IProps {
 
 const DebugAction: React.FC<IProps> = ({ engine }) => {
   const [modalVisible, setModalVisible] = React.useState(false)
+  const [fpsEnabled, setFpsEnabled] = React.useState(false)
+
+  const statsRef = React.useRef<null | {
+    dom: HTMLElement
+    showPanel: (panel: number) => void
+    update: () => void
+  }>(null)
+  const rafIdRef = React.useRef<number | null>(null)
+
+  React.useEffect(() => {
+    if (typeof window === 'undefined') return
+
+    let disposed = false
+
+    const cleanup = () => {
+      if (rafIdRef.current != null) {
+        window.cancelAnimationFrame(rafIdRef.current)
+        rafIdRef.current = null
+      }
+      const stats = statsRef.current
+      if (stats?.dom?.parentNode) {
+        stats.dom.parentNode.removeChild(stats.dom)
+      }
+      statsRef.current = null
+    }
+
+    const start = async () => {
+      cleanup()
+      if (disposed) return
+
+      const StatsCtor = (mod as any).default ?? (mod as any)
+      const stats = new StatsCtor()
+      stats.showPanel(0)
+
+      const dom = stats.dom as HTMLElement
+      dom.style.position = 'fixed'
+      dom.style.left = '10px'
+      dom.style.top = '40px'
+      dom.style.zIndex = '9999'
+      dom.style.pointerEvents = 'none'
+      document.body.appendChild(dom)
+
+      statsRef.current = stats
+
+      const tick = () => {
+        if (disposed || !statsRef.current) return
+        statsRef.current.update()
+        rafIdRef.current = window.requestAnimationFrame(tick)
+      }
+      rafIdRef.current = window.requestAnimationFrame(tick)
+    }
+
+    if (fpsEnabled) start()
+    else cleanup()
+
+    return () => {
+      disposed = true
+      cleanup()
+    }
+  }, [fpsEnabled])
+
   // 撤消 / 重做
   const handlePrintHistory = () => {
     if (!engine) return
@@ -87,10 +149,20 @@ const DebugAction: React.FC<IProps> = ({ engine }) => {
       <Modal visible={modalVisible} title={'辅助调试'} onClose={() => setModalVisible(false)} width={640}>
         <div className="bottom-2.5 left-2.5 z-5 flex flex-wrap gap-2">
           <button
+            onClick={() => setFpsEnabled((v) => !v)}
+            className={`px-2 py-1 text-xs rounded hover:cursor-pointer transition-colors ${
+              fpsEnabled
+                ? 'bg-rose-600 text-white hover:bg-rose-700'
+                : 'bg-slate-700 text-white hover:bg-slate-800'
+            }`}
+          >
+            FPS显示：{fpsEnabled ? '开' : '关'}
+          </button>
+          <button
             onClick={handlePrintHistory}
             className="px-2 py-1 text-xs bg-indigo-600 text-white rounded hover:bg-indigo-700 hover:cursor-pointer transition-colors"
           >
-            打印历史
+            打印历史栈
           </button>
           <button
             onClick={handleNodeAnim}
