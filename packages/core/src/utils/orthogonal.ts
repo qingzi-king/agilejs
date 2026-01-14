@@ -5,6 +5,7 @@
  * @LastEditTime: 2025-09-17 19:42:13
  */
 import { EdgeData, Graph, Point } from "../model/Graph";
+import { getDeviceDpr } from "./dpr";
 import { getPortWorldPosition } from "./ports";
 
 function nodeCenter(graph: Graph, id: string): Point | undefined {
@@ -62,7 +63,7 @@ function buildOrthogonalPathPointsLegacy(edge: EdgeData, graph: Graph): Point[] 
   const b = edge.targetPortId ? getPortWorldPosition(tgt, edge.targetPortId) : nodeCenter(graph, edge.target);
   if (!a || !b) return [];
   // 局部默认：以 DPR 近似换算到世界单位，避免引用未定义的 options
-  const dpr = (typeof window !== "undefined" ? window.devicePixelRatio : 1) || 1;
+  const dpr = getDeviceDpr();
   const stubWorld = 20 * (1 / dpr);
   const tolWorld = 5 * (1 / dpr);
   // 手动正交：保留两端 stub，并将首末手动点沿 stub 轴向对齐，避免出现斜线

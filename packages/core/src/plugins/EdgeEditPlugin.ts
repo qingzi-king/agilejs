@@ -6,6 +6,7 @@
  */
 import type { CanvasEngine } from "../core/CanvasEngine";
 import { Plugin } from "./Plugin";
+import { getDeviceDpr } from "../utils/dpr";
 import { EdgeData, Point } from "../model/Graph";
 import { ReconnectEdgeCommand, SetEdgePointsCommand } from "../commands/GraphCommands";
 import { hitTestNodes } from "../utils/hittest";
@@ -370,7 +371,7 @@ export class EdgeEditPlugin implements Plugin {
     else if (kind === "endpoint") raw = this.options.touchEndpointHitThreshold;
     if (raw == null || raw === "auto") raw = this.options.touchHitThreshold;
     if (raw === "auto" || raw == null) {
-      const dpr = typeof window !== "undefined" && window.devicePixelRatio ? window.devicePixelRatio : 1;
+      const dpr = getDeviceDpr();
       // 基准：endpoint 24, vertex 20, segment 16（乘 DPR，限制 1~2）
       const base = kind === "endpoint" ? 24 : kind === "vertex" ? 20 : 18;
       const factor = Math.min(Math.max(dpr, 1), 2);

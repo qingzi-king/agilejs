@@ -8,6 +8,7 @@ import type { CanvasEngine } from "../core/CanvasEngine";
 import type { NodeData, Point } from "../model/Graph";
 import { GroupTransformCommand } from "../commands/GraphCommands";
 import { Plugin } from "./Plugin";
+import { getDeviceDpr } from "../utils/dpr";
 
 export interface GroupResizeRotatePluginOptions {
   handleSize?: number;
@@ -204,8 +205,7 @@ export class GroupResizeRotatePlugin implements Plugin {
     const { hitTargetPx, touchHitTargetPx, handleSize } = this.options;
     if (isTouch) {
       if (touchHitTargetPx === "auto") {
-        const dpr =
-          typeof window !== "undefined" && (window as any).devicePixelRatio ? (window as any).devicePixelRatio : 1;
+        const dpr = getDeviceDpr();
         return Math.round(28 * dpr);
       }
       return (touchHitTargetPx as number) ?? Math.max(28, handleSize);

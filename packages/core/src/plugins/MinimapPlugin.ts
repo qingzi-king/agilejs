@@ -4,6 +4,7 @@
 import type { CanvasEngine } from "../core/CanvasEngine";
 import { Plugin } from "./Plugin";
 import { PointerEventAdapter } from "../utils/pointer";
+import { getDeviceDpr } from "../utils/dpr";
 
 export interface MinimapOptions {
   width?: number; // 迷你图宽（px，屏幕坐标）
@@ -320,7 +321,7 @@ export class MinimapPlugin implements Plugin {
     let cssW = cssSize.width;
     let cssH = cssSize.height;
     if (cssW <= 0 || cssH <= 0) {
-      const dpr = (window as any).devicePixelRatio || 1;
+      const dpr = getDeviceDpr();
       cssW = this.engine.canvas.width / dpr;
       cssH = this.engine.canvas.height / dpr;
     }
@@ -357,7 +358,7 @@ export class MinimapPlugin implements Plugin {
     let cssH = cssSize.height;
     // 兜底：如果 getCssSize 返回 0，使用传统计算方式
     if (cssW <= 0 || cssH <= 0) {
-      const dpr = (window as any).devicePixelRatio || 1;
+      const dpr = getDeviceDpr();
       cssW = this.engine.canvas.width / dpr;
       cssH = this.engine.canvas.height / dpr;
     }

@@ -9,6 +9,7 @@ import { ICommand } from "../core/CommandHistory";
 import { Graph, NodeData, Point } from "../model/Graph";
 import { GroupTransformCommand } from "../commands/GraphCommands";
 import { Plugin } from "./Plugin";
+import { getDeviceDpr } from "../utils/dpr";
 
 export interface ResizeRotatePluginOptions {
   /**
@@ -1115,7 +1116,8 @@ export class ResizeRotatePlugin implements Plugin {
     if (isTouch) {
       const t = this.options.touchHitTargetPx;
       if (t === "auto" || t == null) {
-        const dpr = (typeof window !== "undefined" && (window.devicePixelRatio || 1)) || 1;
+        // 复用引擎对原生 DPR 的获取逻辑（避免重复、保持一致）
+        const dpr = getDeviceDpr();
         const factor = Math.min(Math.max(dpr, 1), 2);
         return Math.round(28 * factor);
       }

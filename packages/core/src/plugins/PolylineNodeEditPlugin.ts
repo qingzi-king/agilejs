@@ -7,6 +7,7 @@
  */
 import type { CanvasEngine } from "../core/CanvasEngine";
 import { Plugin } from "./Plugin";
+import { getDeviceDpr } from "../utils/dpr";
 import type { NodeData, Point } from "../model/Graph";
 import { UpdateLineNodePointsCommand } from "../commands/GraphCommands";
 
@@ -230,7 +231,7 @@ export class PolylineNodeEditPlugin implements Plugin {
     if (!isTouch) return this.options.hitThreshold;
     const t = this.options.touchHitThreshold;
     if (t === "auto" || t == null) {
-      const dpr = typeof window !== "undefined" && window.devicePixelRatio ? window.devicePixelRatio : 1;
+      const dpr = getDeviceDpr();
       return Math.round(28 * Math.min(Math.max(dpr, 1), 2));
     }
     return t as number;

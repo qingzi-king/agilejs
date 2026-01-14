@@ -14,6 +14,7 @@ import { THEME_PALETTES, CoreThemeName, mergePalette } from "./Themes";
 import { buildQuadtreeFromNodes, Quadtree } from "../utils/quadtree";
 import { PerformanceMonitor, PerformanceStats } from "./PerformanceMonitor";
 import { hitTestNode } from "../utils/hittest";
+import { getDeviceDpr } from "../utils/dpr";
 import type { NodeData, Point } from "../model/Graph";
 
 export interface EngineEvents {
@@ -379,7 +380,7 @@ export class CanvasEngine {
   }
 
   resize(width: number, height: number, forceDpr?: number, immediateRender: boolean = true): void {
-    const nativeDpr = window.devicePixelRatio || 1;
+    const nativeDpr = getDeviceDpr();
     const dpr = forceDpr ?? nativeDpr;
     this._effectiveDpr = dpr;
     this._cssWidth = width;
@@ -421,7 +422,7 @@ export class CanvasEngine {
    * @param mode 交互模式：'pan' 平移（使用较高 DPR 减少模糊），'drag' 拖动（使用较低 DPR 优先流畅）
    */
   private switchToLowDpr(mode: 'pan' | 'drag' = 'drag'): void {
-    const nativeDpr = window.devicePixelRatio || 1;
+    const nativeDpr = getDeviceDpr();
     if (!this._dprDegradeEnabled || nativeDpr <= this._dprDegradeThreshold) return;
     
     // 根据交互模式选择目标 DPR
@@ -441,7 +442,7 @@ export class CanvasEngine {
    * 恢复到原生 DPR 模式
    */
   private switchToNativeDpr(): void {
-    const nativeDpr = window.devicePixelRatio || 1;
+    const nativeDpr = getDeviceDpr();
     if (this._effectiveDpr === nativeDpr) return;  // 已经是原生 DPR
     // 恢复 DPR 也不要同步 render，避免抬手瞬间卡顿
     this.resize(this._cssWidth, this._cssHeight, nativeDpr, false);
@@ -551,7 +552,7 @@ export class CanvasEngine {
     this.plugins.emitHook("beforeRender", this.ctx);
 
     // 计算可视区域（世界坐标）用于裁剪
-    const dpr = this._effectiveDpr || (window as any).devicePixelRatio || 1;
+    const dpr = this._effectiveDpr || getDeviceDpr();
     const cssW = canvas.width / dpr;
     const cssH = canvas.height / dpr;
     const invScale = 1 / this.scale;
@@ -1501,7 +1502,7 @@ export class CanvasEngine {
    * 获取性能统计数据
    */
   getPerformanceStats(): PerformanceStats {
-    const dpr = (window as any).devicePixelRatio || 1;
+    const dpr = this._effectiveDpr || getDeviceDpr();
     const cssW = this.canvas.width / dpr;
     const cssH = this.canvas.height / dpr;
     const { visibleNodes, visibleEdges } = this.measureVisibleCounts(cssW, cssH);
