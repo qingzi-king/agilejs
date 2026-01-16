@@ -12,6 +12,7 @@ interface UIState {
   // 面板显隐状态
   shapesPanelOpen: boolean
   propertyPanelOpen: boolean
+  aiPanelOpen: boolean
 
   // Actions
   toggleTheme: () => void
@@ -20,6 +21,8 @@ interface UIState {
   setShapesPanelOpen: (open: boolean) => void
   togglePropertyPanel: () => void
   setPropertyPanelOpen: (open: boolean) => void
+  toggleAIPanel: () => void
+  setAIPanelOpen: (open: boolean) => void
 }
 
 const useUIStore = create<UIState>()(
@@ -28,6 +31,7 @@ const useUIStore = create<UIState>()(
       theme: 'light',
       shapesPanelOpen: false,
       propertyPanelOpen: false,
+      aiPanelOpen: false,
 
       toggleTheme: () =>
         set((state) => ({
@@ -45,13 +49,19 @@ const useUIStore = create<UIState>()(
         set((state) => ({
           propertyPanelOpen: !state.propertyPanelOpen
         })),
-      setPropertyPanelOpen: (open) => set({ propertyPanelOpen: open })
+      setPropertyPanelOpen: (open) => set({ propertyPanelOpen: open }),
+
+      toggleAIPanel: () =>
+        set((state) => ({
+          aiPanelOpen: !state.aiPanelOpen
+        })),
+      setAIPanelOpen: (open) => set({ aiPanelOpen: open })
     }),
     {
       name: 'agile-editor-ui-storage', // localStorage key
-      storage: createJSONStorage(() => localStorage)
-      // 可选：只持久化部分字段
-      // partialize: (state) => ({ theme: state.theme, shapesPanelOpen: state.shapesPanelOpen }),
+      storage: createJSONStorage(() => localStorage),
+      // 只持久化主题设置，面板状态不持久化（避免刷新后自动展开）
+      partialize: (state) => ({ theme: state.theme })
     }
   )
 )

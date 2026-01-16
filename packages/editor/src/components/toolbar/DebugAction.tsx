@@ -2,7 +2,7 @@
  * @Description: 调试工具
  * @Author: qingzi.wang
  * @Date: 2025-10-17 15:57:28
- * @LastEditTime: 2026-01-14 17:04:32
+ * @LastEditTime: 2026-01-14 18:40:29
  */
 import React from 'react'
 import Tooltip from '@/components/common/Tooltip'
@@ -55,8 +55,8 @@ const DebugAction: React.FC<IProps> = ({ engine }) => {
 
       const dom = stats.dom as HTMLElement
       dom.style.position = 'fixed'
-      dom.style.left = '10px'
-      dom.style.top = '40px'
+      dom.style.left = '5px'
+      dom.style.top = '45px'
       dom.style.zIndex = '9999'
       dom.style.pointerEvents = 'none'
       document.body.appendChild(dom)

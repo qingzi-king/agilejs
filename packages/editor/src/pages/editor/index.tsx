@@ -3,6 +3,7 @@ import Toolbar from '@/components/toolbar'
 import { createNodeByShape } from '@/config/nodeTemplates'
 import PropertyPanel from '@/components/PropertyPanel'
 import ShapesPanel from '@/components/ShapesPanel'
+import AIPanel from '@/components/aiPanel'
 import message from '@/components/common/Message'
 import { useCanvasStore, useUIStore, useSelectionStore } from '@/store'
 import {
@@ -603,6 +604,7 @@ const CanvasEditor: React.FC = () => {
         <ShapesPanel />
         <div ref={containerRef} className="h-full w-full relative" />
         <PropertyPanel />
+        <AIPanel />
         {/* 右上角操作说明和示例切换 */}
         <div className="absolute top-2.5 right-2.5 z-1 bg-gray-100 dark:bg-gray-800 bg-opacity-80 dark:bg-opacity-80 p-2 rounded text-sm max-h-full max-w-[360px] overflow-auto text-gray-900 dark:text-gray-100">
           <div className="flex items-center gap-2">
