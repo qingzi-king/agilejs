@@ -47,6 +47,99 @@ type AnchorPosition =
 
 ---
 
+## 主题
+
+### 浅色主题
+```json
+{
+  "canvas": {
+    "background": "#ffffff",
+    "theme": "light",
+    "grid": {
+      "size": 20,
+      "color": "#f3f4f6",
+      "alpha": 1,
+      "type": "line",
+      "visible": true
+    },
+    "minimap": {
+      "width": 200,
+      "height": 140,
+      "position": "bottom-right",
+      "margin": 12,
+      "padding": 5,
+      "background": "rgba(0,0,0,0.04)",
+      "borderColor": "#F3F3F3",
+      "nodeColor": "#64748b",
+      "edgeColor": "#94a3b8",
+      "viewportStroke": "#3b82f6",
+      "viewportFill": "rgba(59,130,246,0.18)",
+      "showNodes": true,
+      "showEdges": false,
+      "clickToCenter": true,
+      "draggableViewport": true,
+      "maxEdgeCountForDraw": 1500,
+      "focusMode": "auto",
+      "focusViewportAreaThreshold": 0.08,
+      "focusPadding": 0.25,
+      "autoBlendLow": 0.08,
+      "autoBlendHigh": 0.16,
+      "responsive": true,
+      "widthRatio": 0.22,
+      "minWidth": 120,
+      "maxWidth": 200,
+      "syncContentWithZoom": true
+    }
+  }
+}
+```
+
+### 深色主题
+
+```json
+{
+  "canvas": {
+    "background": "#0f172a",
+    "theme": "dark",
+    "grid": {
+      "size": 20,
+      "color": "#1f2937",
+      "alpha": 1,
+      "type": "line",
+      "visible": true
+    },
+    "minimap": {
+      "width": 200,
+      "height": 140,
+      "position": "bottom-right",
+      "margin": 12,
+      "padding": 5,
+      "background": "rgba(255,255,255,0.06)",
+      "borderColor": "#475569",
+      "nodeColor": "#94a3b8",
+      "edgeColor": "#94a3b8",
+      "viewportStroke": "#38bdf8",
+      "viewportFill": "rgba(56,189,248,0.18)",
+      "showNodes": true,
+      "showEdges": false,
+      "clickToCenter": true,
+      "draggableViewport": true,
+      "maxEdgeCountForDraw": 1500,
+      "focusMode": "auto",
+      "focusViewportAreaThreshold": 0.08,
+      "focusPadding": 0.25,
+      "autoBlendLow": 0.08,
+      "autoBlendHigh": 0.16,
+      "responsive": true,
+      "widthRatio": 0.22,
+      "minWidth": 120,
+      "maxWidth": 200,
+      "syncContentWithZoom": true
+    }
+  }
+}
+```
+
 ## 节点数据结构
 
 ### 完整的 NodeData 接口
@@ -118,6 +211,17 @@ interface NodeCustomData extends Record<string, unknown> {
     shadowBlur?: number;           // 阴影模糊度
     shadowOffset?: {x: number, y: number};  // 阴影偏移
     [key: string]: any;            // 其他形状特定样式
+    label: {
+      rotateWithNode: boolean;
+      position: 'top' | 'right' | 'bottom' | 'left';
+      maxWidth: number;
+      textOverflow: 'wrap' | 'ellipsis';
+      background: string;
+      backgroundAlpha: number;
+      color: string;
+      fontSize: number;
+      [key: string]: any;            // 其他形状特定样式
+    }
   };
   
   // ===== 文本样式 =====
@@ -191,7 +295,17 @@ const fullNode: NodeData = {
       stroke: '#2E7D32',
       lineWidth: 2,
       radius: 4,
-      opacity: 1
+      opacity: 1,
+      label: {
+        rotateWithNode: false,
+        position: "right",
+        maxWidth: 160,
+        textOverflow: "wrap",
+        background: "#eef2ff",
+        backgroundAlpha: 1,
+        color: "#1f2937",
+        fontSize: 12
+      }
     },
     textStyle: {
       fontSize: 14,
@@ -374,18 +488,6 @@ interface EdgeCustomData extends Record<string, unknown> {
     [key: string]: any;
   };
   
-  // ===== 标签样式 =====
-  label?: {
-    text?: string;                 // 标签文本
-    fontSize?: number;             // 字体大小
-    fontColor?: string;            // 字体颜色
-    background?: string;           // 背景色
-    padding?: number;              // 内边距
-    position?: number;             // 位置（0-1，0 为源，1 为目标）
-    offset?: Point;                // 偏移量
-    [key: string]: any;
-  };
-  
   // ===== 管道样式（特殊用途） =====
   pipeline?: {
     outerWidth?: number;           // 外层宽度
@@ -452,13 +554,6 @@ const fullEdge: EdgeData = {
       opacity: 1,
       lineCap: 'round',
       lineJoin: 'round'
-    },
-    label: {
-      text: '流转',
-      fontSize: 12,
-      fontColor: '#2196F3',
-      position: 0.5,
-      offset: { x: 0, y: -10 }
     },
     flow: {
       enabled: false,
@@ -536,13 +631,7 @@ const businessNode: NodeData = {
   size: { width: 120, height: 80 },
   data: {
     label: '订单处理',
-    style: { fill: '#2196F3' },
-    business: {
-      processId: 'order-001',
-      owner: 'sales-team',
-      deadline: '2026-01-20',
-      priority: 'high'
-    }
+    style: { fill: '#2196F3' }
   }
 };
 
@@ -554,13 +643,7 @@ const orgNode: NodeData = {
   size: { width: 120, height: 80 },
   data: {
     label: '技术部',
-    style: { fill: '#4CAF50' },
-    organization: {
-      departmentId: 'dept-tech',
-      headCount: 15,
-      budget: 500000,
-      reportTo: 'VP-Engineering'
-    }
+    style: { fill: '#4CAF50' }
   }
 };
 
@@ -572,13 +655,7 @@ const mlNode: NodeData = {
   size: { width: 120, height: 80 },
   data: {
     label: 'Model V2',
-    style: { fill: '#FF9800' },
-    ml: {
-      modelName: 'bert-base',
-      version: '2.0',
-      accuracy: 0.95,
-      trainDate: '2026-01-10'
-    }
+    style: { fill: '#FF9800' }
   }
 };
 ```
@@ -723,6 +800,22 @@ function validateEdgeData(edge: any): boolean {
 
 ## 编辑器与画布引擎 API 集成（应用到画布）
 
+### 0) 画布状态（canvas）字段范围（与引擎一致）
+
+`canvas` 支持以下字段（未提供则保持当前值）：
+
+- `background`: 背景色
+- `theme`: `light` | `dark`
+- `viewport`: 视口
+  - `scale`: 缩放比例
+  - `translation`: 平移 `{ x, y }`
+- `edgeSnapshotMode`: `auto` | `off` | `always`
+- `interactionConfig`: 交互配置（由引擎读取）
+- `dprDegradation`: DPR 降级配置（由引擎读取）
+- `grid`: 网格配置 `{ size, color, alpha, type, visible }`
+- `guides`: 参考线配置 `{ threshold, color, visible }`
+- `minimap`: 迷你地图配置（透传到 MinimapPlugin）
+
 ### 1) 替换场景（mode = replace）
 
 ```typescript
@@ -735,6 +828,8 @@ fromScene(engine, {
 })
 ```
 
+说明：`fromScene` 会清空当前图数据并重新加载（不会写入历史栈）。
+
 ### 2) 追加节点/边（mode = append）
 
 ```typescript
@@ -745,6 +840,8 @@ nodes.forEach((n) => engine.history.execute(new AddNodeCommand(engine.graph, n))
 edges.forEach((e) => engine.history.execute(new AddEdgeCommand(engine.graph, e)))
 engine.history.commitTransaction()
 ```
+
+说明：追加时先添加节点、再添加边，确保 `source`/`target` 已存在。
 
 ### 3) 容器/分组场景落地要点
 
@@ -1129,6 +1226,5 @@ interface PerformanceOptimizations {
 - 美化与重新排版时，不要新增节点和边
 - 颜色仅支持16进制、rgb、rgba，不支持渐变色
 - 边的label只能字符串（不同于节点中的label）
-
-**注意**
-整体回答精炼、简洁，直接输出核心内容
+- 节点内部涉及文本的优先text属性，节点附带的label通常在其周围
+- 整体回答精炼、简洁，直接输出核心内容

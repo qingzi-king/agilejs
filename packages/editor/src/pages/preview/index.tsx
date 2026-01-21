@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react'
+import { useSearchParams, useNavigate } from 'react-router-dom'
 import {
   CanvasEngine,
   GridPlugin,
@@ -66,7 +67,11 @@ const CanvasPreview: React.FC = () => {
   // 用于拖拽到画布创建节点时，记住上次生成的自增计数
   // const groupPluginRef = useRef<GroupPlugin | null>(null);
   const historyOffRef = useRef<null | (() => void)>(null)
-  const [exampleKey, setExampleKey] = useState<string>('default')
+  const [searchParams] = useSearchParams()
+  const navigate = useNavigate()
+  const [exampleKey, setExampleKey] = useState<string>(() => {
+    return searchParams.get('demoType') || 'default'
+  })
   // 使用 Vite 动态导入拆分后的 json 文件
   const exampleModules = useMemo(() => {
     return import.meta.glob('@/mock/examples/*.json', { eager: true, import: 'default' }) as Record<string, any>
@@ -204,12 +209,6 @@ const CanvasPreview: React.FC = () => {
     // 悬停光标：节点上显示 move，移出恢复（最后注册，确保不被其他插件覆盖）
     // engine.plugins.use(new HoverCursorPlugin());
 
-    // 从外部 JSON 装载默认示例（拆分后的 default.json）
-    const data = exampleMap['default']
-    if (data) {
-      fromScene(engine, data)
-    }
-
     engine.start()
 
     // 自动捕获 engine.events 支持的所有事件并打印（注：实际按需捕获）
@@ -235,6 +234,14 @@ const CanvasPreview: React.FC = () => {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [exampleMap])
+
+  // 初始化或 exampleKey 变化时加载示例
+  useEffect(() => {
+    if (engineRef.current && exampleMap[exampleKey]) {
+      loadExample(exampleKey)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [exampleKey, exampleMap])
 
   // 自动捕获 engine.events 支持的所有事件并打印
   const handleEvent = () => {
@@ -358,6 +365,8 @@ const CanvasPreview: React.FC = () => {
               value={exampleKey}
               onChange={(e) => {
                 const k = e.target.value
+                // 使用 React Router 更新 URL 参数
+                navigate(`?demoType=${k}`, { replace: true })
                 setExampleKey(k)
                 loadExample(k)
               }}

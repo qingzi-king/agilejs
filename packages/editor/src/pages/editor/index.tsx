@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react'
+import { useSearchParams, useNavigate } from 'react-router-dom'
 import Toolbar from '@/components/toolbar'
 import { createNodeByShape } from '@/config/nodeTemplates'
 import PropertyPanel from '@/components/PropertyPanel'
@@ -86,7 +87,11 @@ const CanvasEditor: React.FC = () => {
   useFormatPainter()
 
   const historyOffRef = useRef<null | (() => void)>(null)
-  const [exampleKey, setExampleKey] = useState<string>('default')
+  const [searchParams] = useSearchParams()
+  const navigate = useNavigate()
+  const [exampleKey, setExampleKey] = useState<string>(() => {
+    return searchParams.get('demoType') || 'default'
+  })
   // 使用 Vite 动态导入拆分后的 json 文件
   const exampleModules = useMemo(() => {
     return import.meta.glob('@/mock/examples/*.json', { eager: true, import: 'default' }) as Record<string, any>
@@ -275,12 +280,6 @@ const CanvasEditor: React.FC = () => {
     engine.plugins.use(new HoverCursorPlugin())
     // 数据悬停提示：仅在编辑模式下工作
     engine.plugins.use(new DataTooltipPlugin({ delayMs: 300 }))
-
-    // 从外部 JSON 装载默认示例（拆分后的 default.json）
-    const data = exampleMap['default']
-    if (data) {
-      fromScene(engine, data)
-    }
 
     engine.start()
 
@@ -473,6 +472,14 @@ const CanvasEditor: React.FC = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [exampleMap])
 
+  // 初始化或 exampleKey 变化时加载示例
+  useEffect(() => {
+    if (engineRef.current && exampleMap[exampleKey]) {
+      loadExample(exampleKey)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [exampleKey, exampleMap])
+
   // 自动捕获 engine.events 支持的所有事件并打印
   const handleEvent = () => {
     const engine = engineRef.current;
@@ -591,6 +598,8 @@ const CanvasEditor: React.FC = () => {
   // 切换示例
   const handleChangeExample = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const k = e.target.value
+    // 使用 React Router 更新 URL 参数
+    navigate(`?demoType=${k}`, { replace: true })
     setExampleKey(k)
     loadExample(k)
   }
