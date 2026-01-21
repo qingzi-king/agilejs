@@ -284,3 +284,34 @@ title: 使用说明
 选中元素后点击开启，再次点击关闭，可以针对样式格式化，本质上是通过数据中style样式替换。
 
 ![格式刷](../../static/img/editor/use_29.png)
+
+### AI
+
+:::tip
+AI模型的API Key仅存储于本地，不会外传，放心使用。
+:::
+
+#### 如何使用 AI 生成/调优画布
+- 打开右上角 “AI” 面板，先确认系统提示词和业务约束是否符合当前场景（可在弹窗中查看/编辑）。
+- 在输入框描述需求（越具体越好，如节点类型、连线方式、分组、布局方向、样式倾向）。
+- 选择动作：
+  - **生成画布**：覆盖当前画布并生成新的节点/边。
+  - **追加生成**：在现有画布上追加生成内容。
+  - **调优**：基于当前选中元素或全局进行微调（位置/尺寸/样式/文案）。
+- 点击执行后等待生成，生成完成会自动落盘到画布中，可使用撤销/重做进行回溯。
+- 如需再次迭代，可在相同对话上下文继续输入，让 AI 持续改进；满意后记得保存场景。
+- AI系统提示参考提示词：[系统提示词](https://docs.cq-tct.com/agilejs/system-prompt.md)
+
+
+![AI配置](../../static/img/editor/use_33.png)
+
+<div style={{ display: 'flex', gap: '16px', justifyContent: 'center', alignItems: 'center' }}>
+  <div style={{ maxWidth: '49%', height: 'auto' }}>
+    <img src={require('../../static/img/editor/use_31.png').default} alt="AI生成图1" />
+    <center style={{ color: 'gray' }}>AI生成初稿效果</center>
+  </div>
+  <div style={{ maxWidth: '49%', height: 'auto' }}>
+    <img src={require('../../static/img/editor/use_32.png').default} alt="AI生成图2" />
+    <center style={{ color: 'gray' }}>AI调优后效果</center>
+  </div>
+</div>
