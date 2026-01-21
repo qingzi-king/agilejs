@@ -2,7 +2,7 @@
  * @Description:
  * @Author: qingzi.wang
  * @Date: 2025-10-14 12:26:16
- * @LastEditTime: 2025-11-18 14:30:25
+ * @LastEditTime: 2026-01-21 16:46:30
  */
 import React from 'react'
 import { createPortal } from 'react-dom'
@@ -20,7 +20,7 @@ const Modal: React.FC<ModalProps> = ({ visible, title, onClose, width = 560, chi
   if (!visible) return null
   return createPortal(
     <div className="fixed inset-0 z-9999 flex items-center justify-center">
-      <div className="absolute inset-0 bg-black/30" onClick={onClose} />
+      <div className="absolute inset-0 bg-black/30 backdrop-blur-[1px]" onClick={onClose} />
       <div
         className="relative bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 rounded-md shadow-xl border border-gray-200 dark:border-gray-700 overflow-hidden"
         style={{ width, maxWidth: '90vw', maxHeight: '84vh', display: 'flex', flexDirection: 'column' }}
