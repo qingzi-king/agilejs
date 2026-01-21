@@ -47,6 +47,25 @@ export class GroupResizeRotatePlugin implements Plugin {
   private active: HandleType = HandleType.None;
   private hover: HandleType = HandleType.None;
 
+  private _rafMarkDirty: number | null = null;
+
+  private requestMarkDirtyStructure(): void {
+    if (this._rafMarkDirty != null) return;
+    this._rafMarkDirty = window.requestAnimationFrame(() => {
+      this._rafMarkDirty = null;
+      this.engine.graph.markDirty("structure");
+    });
+  }
+
+  private markDirtyForPreview(): void {
+    const mode = (this.engine as any).getEdgeSnapshotMode?.() as ("auto" | "off" | "always" | undefined);
+    if (mode === "off") {
+      this.engine.graph.markDirty("style");
+      return;
+    }
+    this.requestMarkDirtyStructure();
+  }
+
   private startRect: { x: number; y: number; w: number; h: number } | null = null;
   private startCenter: Point = { x: 0, y: 0 };
   private startAngle = 0; // 鼠标起始角
@@ -379,6 +398,8 @@ export class GroupResizeRotatePlugin implements Plugin {
         deltaRad: delta,
         center: { ...this.startCenter },
       });
+
+      this.markDirtyForPreview();
       return;
     }
 
@@ -543,6 +564,8 @@ export class GroupResizeRotatePlugin implements Plugin {
         scale: { sx, sy },
         angleRad: rad,
       });
+
+      this.markDirtyForPreview();
     }
   };
 
@@ -613,6 +636,12 @@ export class GroupResizeRotatePlugin implements Plugin {
     }
     // 通知引擎结束 resize（用于降质渲染优化）
     this.engine.setResizingNodes(false);
+
+    if (this._rafMarkDirty != null) {
+      cancelAnimationFrame(this._rafMarkDirty);
+      this._rafMarkDirty = null;
+    }
+
     this.active = HandleType.None;
     this.nodeStarts = [];
     if (this.previewAngleDelta != null) {
@@ -722,8 +751,7 @@ export class GroupResizeRotatePlugin implements Plugin {
         deltaRad: delta,
         center: { ...this.startCenter },
       });
-      // 使用 'style' 模式避免触发边快照重建和四叉树重建（resize 预览期间的性能优化）
-      this.engine.graph.markDirty("style");
+      this.markDirtyForPreview();
       e.preventDefault();
       return;
     }
@@ -850,8 +878,7 @@ export class GroupResizeRotatePlugin implements Plugin {
         scale: { sx, sy },
         angleRad: rad,
       });
-      // 使用 'style' 模式避免触发边快照重建和四叉树重建（resize 预览期间的性能优化）
-      this.engine.graph.markDirty("style");
+      this.markDirtyForPreview();
     }
     e.preventDefault();
   };
