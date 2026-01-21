@@ -72,7 +72,56 @@ export const DEFAULT_SYSTEM_PROMPT = `你是一个专业的图形编辑助手，
 1. 帮助用户优化图形布局和排版
 2. 提供设计建议和最佳实践
 3. 解答关于图形编辑的问题
-4. 生成图形描述和文档
+4. 生成可直接应用到画布的图数据
+
+当用户要求“生成/创建/应用到画布/直接绘制”时，必须输出一个可应用的 JSON 代码块（仅一个），格式如下：
+{
+  "type": "agilejs-scene",
+  "mode": "append" | "replace",
+  "data": { "canvas"?: {...}, "nodes": [...], "edges": [...] }
+}
+
+当用户要求“修改/更新/调整/仅更新部分元素”时，可以输出增量更新：
+{
+  "type": "agilejs-delta",
+  "mode": "update",
+  "data": {
+    "node"?: { "id"?: "..." | "@selection", "ids"?: ["..."], "position"?: {...}, "size"?: {...}, "data"?: {...} },
+    "edge"?: { "id"?: "..." | "@selection", "ids"?: ["..."], "data"?: {...}, "points"?: [...] },
+    "batch"?: {
+      "moveNodes"?: { "ids": ["..."] | "@selection", "dx": number, "dy": number },
+      "updateNodes"?: [ { "id"?: "..." | "@selection", "ids"?: ["..."], ... } ],
+      "updateEdges"?: [ { "id"?: "..." | "@selection", "ids"?: ["..."], ... } ]
+    }
+  }
+}
+
+当用户要求“删除/移除元素”时，可以输出增量删除：
+{
+  "type": "agilejs-delta",
+  "mode": "delete",
+  "data": {
+    "delete": { "nodes": ["node-1"], "edges": ["edge-1"] }
+  }
+}
+
+节点与边的关键字段：
+- NodeData 必填：id, shape, position{x,y}, size{width,height}
+- EdgeData 必填：id, shape, source, target
+
+扩展节点类型：
+- image：data.image.src（URL/base64）, data.image.fit (fill|contain|cover)
+- svg-path：data.svg.path 或 data.svg.paths, data.svg.viewBox, data.svg.fit (stretch|contain|cover)
+- svg-image：data.svg.xml, data.svg.viewBox, data.svg.fit (stretch|contain|cover)
+
+容器与分组：isContainer, parentId, groupPath/groupId。
+
+输出要求：
+- JSON 放在 \`\`\`json 代码块中；不要额外的 JSON 以外内容嵌套在代码块里
+- 默认使用 mode=append，除非用户明确要求替换
+- ID 唯一且可读（node-1, edge-1 等）
+
+系统会在消息中附带当前画布的序列化 JSON 和选中信息，请优先使用这些真实数据推理与生成。
 
 请用简洁清晰的语言回答用户问题。`
 
@@ -164,7 +213,7 @@ const useAIStore = create<AIState>()(
             ...state.messages,
             {
               ...message,
-              id: `msg_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+              id: `msg_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`,
               timestamp: Date.now()
             }
           ]
@@ -212,7 +261,7 @@ const useAIStore = create<AIState>()(
           }))
         } else {
           // 创建新会话
-          const newSessionId = `session_${now}_${Math.random().toString(36).substr(2, 9)}`
+          const newSessionId = `session_${now}_${Math.random().toString(36).slice(2, 11)}`
           set((s) => ({
             currentSessionId: newSessionId,
             sessions: [

@@ -1,5 +1,25 @@
 import React, { useRef, useEffect, useState, useCallback } from 'react'
-import { useAIStore, useCanvasStore } from '@/store'
+import { useAIStore, useCanvasStore, useSelectionStore } from '@/store'
+import {
+  AddEdgeCommand,
+  AddNodeCommand,
+  RemoveNodeCommand,
+  RemoveEdgeCommand,
+  MoveNodeCommand,
+  MoveNodesCommand,
+  ResizeNodeCommand,
+  SetZIndexCommand,
+  SetNodeRotationCommand,
+  UpdateNodeDataCommand,
+  UpdateEdgeDataCommand,
+  UpdateNodePropsCommand,
+  UpdateNodePortsCommand,
+  SetEdgeShapeCommand,
+  SetEdgePointsCommand,
+  ReconnectEdgeCommand,
+  fromScene,
+  toScene
+} from '@fnt-agilejs/core'
 import { callAIServiceStream } from './AIStream'
 import { MessageBubble } from './MessageBubble'
 
@@ -10,10 +30,12 @@ export const ChatTab: React.FC = () => {
     newSession, saveCurrentSession, loadSession, deleteSession
   } = useAIStore()
   const engine = useCanvasStore((state) => state.engine)
+  const { selectedNodeIds, selectedEdgeIds, selectionKind } = useSelectionStore()
   const [input, setInput] = useState('')
   const [showHistory, setShowHistory] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
+  const latestAssistantContentRef = useRef<string>('')
 
   // 滚动到底部
   const scrollToBottom = useCallback(() => {
@@ -42,12 +64,396 @@ export const ChatTab: React.FC = () => {
   // 获取画布上下文
   const getCanvasContext = useCallback(() => {
     if (!engine) return ''
-    
+
     const nodes = engine.graph.getNodes()
     const edges = engine.graph.getEdges()
-    
-    return `当前画布包含 ${nodes.length} 个节点和 ${edges.length} 条边。`
+    const selectionSummary = `当前选中：${selectionKind}（节点 ${selectedNodeIds.length}，边 ${selectedEdgeIds.length}）`
+    let sceneJson = ''
+    try {
+      const scene = toScene(engine)
+      const raw = JSON.stringify(scene)
+      const maxLen = 6000
+      sceneJson = raw.length > maxLen ? `${raw.slice(0, maxLen)}...<truncated>` : raw
+    } catch {
+      sceneJson = ''
+    }
+
+    const serialized = sceneJson ? `\n当前画布序列化(JSON)：${sceneJson}` : ''
+    return `当前画布包含 ${nodes.length} 个节点和 ${edges.length} 条边。${selectionSummary}${serialized}`
+  }, [engine, selectedNodeIds.length, selectedEdgeIds.length, selectionKind])
+
+  const applyCanvasState = useCallback((canvas: any) => {
+    if (!engine || !canvas) return
+    const theme = canvas.theme as 'light' | 'dark' | undefined
+    if (theme && (engine as any).setTheme) (engine as any).setTheme(theme)
+    if (canvas.background != null) (engine as any).background = canvas.background
+    if (canvas.viewport) {
+      const { scale, translation } = canvas.viewport
+      if (typeof scale === 'number') (engine as any).setScale?.(scale)
+      if (translation && typeof translation.x === 'number' && typeof translation.y === 'number') {
+        ;(engine as any).setTranslation?.(translation.x, translation.y)
+      }
+    }
+    if (canvas.edgeSnapshotMode && (engine as any).setEdgeSnapshotMode) {
+      ;(engine as any).setEdgeSnapshotMode(canvas.edgeSnapshotMode)
+    }
+    if (canvas.interactionConfig && (engine as any).setInteractionConfig) {
+      ;(engine as any).setInteractionConfig(canvas.interactionConfig)
+    }
+    if (canvas.dprDegradation && (engine as any).setDprDegradation) {
+      ;(engine as any).setDprDegradation(canvas.dprDegradation)
+    }
+    const pm: any = (engine.plugins as any).plugins
+    const grid = pm?.get?.('grid')
+    if (grid && canvas.grid) {
+      if (canvas.grid.size != null) grid.size = canvas.grid.size
+      if (canvas.grid.color != null) grid.color = canvas.grid.color
+      if (canvas.grid.alpha != null) grid.alpha = canvas.grid.alpha
+      if (canvas.grid.type != null) grid.type = canvas.grid.type
+      if (canvas.grid.visible != null) grid.visible = canvas.grid.visible
+    }
+    const guides = pm?.get?.('guides')
+    if (guides && canvas.guides) {
+      if (canvas.guides.threshold != null) guides.threshold = canvas.guides.threshold
+      if (canvas.guides.color != null) guides.color = canvas.guides.color
+      if (canvas.guides.visible != null) guides.visible = canvas.guides.visible
+    }
+    const minimap = pm?.get?.('minimap')
+    if (minimap && canvas.minimap) {
+      const mo: any = (minimap as any).opts || {}
+      const src = canvas.minimap || {}
+      Object.keys(src).forEach((k) => {
+        const v = (src as any)[k]
+        if (v !== undefined) mo[k] = v
+      })
+    }
   }, [engine])
+
+  const parseSceneFromDescription = useCallback((text: string) => {
+    if (!text) return null
+    const lines = text.split(/\n+/).map((l) => l.trim()).filter(Boolean)
+    const nodes: any[] = []
+    const edges: any[] = []
+
+    const shapeMap: Record<string, string> = {
+      圆角矩形: 'rect',
+      矩形: 'rect',
+      圆形: 'circle',
+      菱形: 'diamond',
+      椭圆: 'ellipse',
+      六边形: 'hexagon',
+      五边形: 'pentagon',
+      八边形: 'octagon',
+      星形: 'star',
+      三角形: 'triangle'
+    }
+
+    const edgeShapeMap: Record<string, string> = {
+      贝塞尔: 'edge-bezier',
+      贝塞尔曲线: 'edge-bezier',
+      直线: 'edge-straight',
+      正交: 'edge-orthogonal',
+      正交线: 'edge-orthogonal',
+      折线: 'edge-polyline'
+    }
+
+    const nodeRegex = /(.+?)\s*\(ID:\s*([^)]+)\)\s*-\s*位置\s*\(([-\d.]+)\s*,\s*([-\d.]+)\)\s*[，,]?\s*(?:尺寸\s*(\d+(?:\.\d+)?)\s*[×x]\s*(\d+(?:\.\d+)?)|直径\s*(\d+(?:\.\d+)?))(?:\s*[，,]\s*圆角半径\s*(\d+(?:\.\d+)?))?/i
+    const edgeRegex = /边\s*\d+\s*\(ID:\s*([^)]+)\)\s*-\s*从(.+?)\s*\(([^)]+)\)\s*到(.+?)\s*\(([^)]+)\)\s*的\s*([\u4e00-\u9fa5A-Za-z-]+)?/i
+
+    const hasBlueEdge = /蓝色|蓝色边|蓝色曲线|blue/i.test(text)
+    const defaultNodeStyle = { fill: '#e5e7eb', stroke: '#374151', lineWidth: 1 }
+    const defaultEdgeStyle = { stroke: hasBlueEdge ? '#3b82f6' : '#6b7280', lineWidth: 2 }
+
+    for (const line of lines) {
+      const nm = line.match(nodeRegex)
+      if (nm) {
+        const rawShape = nm[1].trim()
+        const id = String(nm[2]).trim()
+        const x = Number(nm[3])
+        const y = Number(nm[4])
+        const w = nm[5] ? Number(nm[5]) : Number(nm[7])
+        const h = nm[6] ? Number(nm[6]) : Number(nm[7])
+        const radius = nm[8] ? Number(nm[8]) : undefined
+        const shape = shapeMap[rawShape] || 'rect'
+        const style: any = { ...defaultNodeStyle }
+        if (rawShape.includes('圆角')) style.borderRadius = radius ?? 8
+        nodes.push({
+          id,
+          shape,
+          position: { x, y },
+          size: { width: w, height: h },
+          data: { label: rawShape, style }
+        })
+        continue
+      }
+      const em = line.match(edgeRegex)
+      if (em) {
+        const id = String(em[1]).trim()
+        const sourceId = String(em[3]).trim()
+        const targetId = String(em[5]).trim()
+        const kind = em[6]?.trim() || ''
+        const shape = edgeShapeMap[kind] || 'edge-bezier'
+        edges.push({ id, shape, source: sourceId, target: targetId, data: { style: defaultEdgeStyle } })
+      }
+    }
+
+    if (nodes.length === 0 && edges.length === 0) return null
+    return { type: 'agilejs-scene', mode: 'append', data: { nodes, edges } }
+  }, [])
+
+  const extractScenePayload = useCallback((text: string) => {
+    if (!text) return null
+    const blocks: string[] = []
+    const jsonBlock = /```json\s*([\s\S]*?)```/gi
+    const anyBlock = /```\s*([\s\S]*?)```/g
+    let m: RegExpExecArray | null
+    while ((m = jsonBlock.exec(text)) !== null) blocks.push(m[1])
+    if (blocks.length === 0) {
+      while ((m = anyBlock.exec(text)) !== null) blocks.push(m[1])
+    }
+    if (blocks.length === 0 && text.trim().startsWith('{') && text.trim().endsWith('}')) {
+      blocks.push(text.trim())
+    }
+    for (const raw of blocks) {
+      try {
+        const parsed = JSON.parse(raw)
+        const data = parsed?.data ?? parsed?.scene ?? parsed
+        const hasData = data?.nodes || data?.edges || data?.canvas || data?.node || data?.edge
+        const isTypeMatch = parsed?.type === 'agilejs-scene' || parsed?.type === 'agilejs-delta'
+        const isUpdateMode = parsed?.mode === 'update' || parsed?.update === true
+        if (isTypeMatch || isUpdateMode || hasData) {
+          return parsed
+        }
+      } catch {
+        // ignore parse errors
+      }
+    }
+    return parseSceneFromDescription(text)
+  }, [parseSceneFromDescription])
+
+  const applyScenePayload = useCallback((payload: any) => {
+    if (!engine || !payload) return { applied: false, reason: 'no-engine' }
+    const data = payload?.data ?? payload?.scene ?? payload
+    const mode = payload?.mode === 'replace' ? 'replace' : payload?.mode === 'delete' ? 'delete' : payload?.mode === 'update' ? 'update' : 'append'
+    const nodes = Array.isArray(data?.nodes) ? data.nodes : data?.node ? [data.node] : []
+    const edges = Array.isArray(data?.edges) ? data.edges : data?.edge ? [data.edge] : []
+    const normalizeIds = (list: any) =>
+      (Array.isArray(list) ? list : list ? [list] : [])
+        .map((it: any) => (typeof it === 'string' ? it : it?.id))
+        .filter((v: any) => typeof v === 'string' && v.length > 0)
+    const deleteNodeIds = normalizeIds(
+      data?.delete?.nodes ?? data?.deleteNodes ?? data?.remove?.nodes ?? data?.removeNodes
+    )
+    const deleteEdgeIds = normalizeIds(
+      data?.delete?.edges ?? data?.deleteEdges ?? data?.remove?.edges ?? data?.removeEdges
+    )
+
+    if (mode === 'replace') {
+      fromScene(engine, data)
+      return { applied: true, mode, nodes: nodes.length, edges: edges.length }
+    }
+
+    if (mode === 'update' || mode === 'delete' || payload?.type === 'agilejs-delta' || payload?.update === true) {
+      const graph = engine.graph as any
+      const history = engine.history as any
+      const runCmd = (cmd: any) => (history?.execute ? history.execute(cmd) : cmd.do?.())
+
+      const normalizeIds = (value: any, fallback: string[]) => {
+        if (value === '@selection') return fallback
+        if (Array.isArray(value)) return value.map((v) => (typeof v === 'string' ? v : v?.id)).filter(Boolean)
+        if (typeof value === 'string') return [value]
+        if (value && typeof value === 'object' && value.id) return [value.id]
+        return []
+      }
+
+      const applyNodePatchToId = (id: string, patch: any) => {
+        if (!id) return
+        const node = graph.getNode?.(id)
+        if (!node) return
+
+        if (patch.position && typeof patch.position.x === 'number' && typeof patch.position.y === 'number') {
+          runCmd(new MoveNodeCommand(engine.graph, id, patch.position.x, patch.position.y))
+        }
+        if (patch.size && typeof patch.size.width === 'number' && typeof patch.size.height === 'number') {
+          runCmd(new ResizeNodeCommand(engine.graph, id, patch.size.width, patch.size.height))
+        }
+        if (typeof patch.rotation === 'number') {
+          runCmd(new SetNodeRotationCommand(engine.graph, id, patch.rotation))
+        }
+        if (typeof patch.zIndex === 'number') {
+          runCmd(new SetZIndexCommand(engine.graph, id, patch.zIndex))
+        }
+        if (patch.data && typeof patch.data === 'object') {
+          runCmd(new UpdateNodeDataCommand(engine.graph, id, patch.data))
+        }
+        const propsPatch: any = {}
+        ;['selectable', 'draggable', 'resizable', 'rotatable', 'groupId', 'parentId', 'isContainer'].forEach((k) => {
+          if (k in patch) propsPatch[k] = patch[k]
+        })
+        if (Object.keys(propsPatch).length > 0) {
+          runCmd(new UpdateNodePropsCommand(engine.graph, id, propsPatch))
+        }
+        if (Array.isArray(patch.ports)) {
+          runCmd(new UpdateNodePortsCommand(engine.graph, id, patch.ports))
+        }
+      }
+
+      const applyEdgePatchToId = (id: string, patch: any) => {
+        if (!id) return
+        const edge = graph.getEdge?.(id)
+        if (!edge) return
+
+        if (patch.data && typeof patch.data === 'object') {
+          runCmd(new UpdateEdgeDataCommand(engine.graph, id, patch.data))
+        }
+        if (typeof patch.shape === 'string') {
+          runCmd(new SetEdgeShapeCommand(engine.graph, id, patch.shape))
+        }
+        if (Array.isArray(patch.points)) {
+          runCmd(new SetEdgePointsCommand(engine.graph, id, edge.points, patch.points))
+        }
+        if (
+          patch.source ||
+          patch.target ||
+          patch.sourcePortId !== undefined ||
+          patch.targetPortId !== undefined
+        ) {
+          runCmd(
+            new ReconnectEdgeCommand(
+              engine.graph,
+              id,
+              {
+                source: edge.source,
+                target: edge.target,
+                sourcePortId: edge.sourcePortId,
+                targetPortId: edge.targetPortId
+              },
+              {
+                source: patch.source ?? edge.source,
+                target: patch.target ?? edge.target,
+                sourcePortId: patch.sourcePortId ?? edge.sourcePortId,
+                targetPortId: patch.targetPortId ?? edge.targetPortId
+              }
+            )
+          )
+        }
+      }
+
+      const applyNodePatch = (patch: any) => {
+        if (!patch) return
+        const ids = normalizeIds(patch.ids ?? patch.id, selectedNodeIds)
+        ids.forEach((id) => applyNodePatchToId(id, patch))
+      }
+
+      const applyEdgePatch = (patch: any) => {
+        if (!patch) return
+        const ids = normalizeIds(patch.ids ?? patch.id, selectedEdgeIds)
+        ids.forEach((id) => applyEdgePatchToId(id, patch))
+      }
+
+      const applyDeletes = () => {
+        deleteEdgeIds.forEach((id: string) => runCmd(new RemoveEdgeCommand(engine.graph, id)))
+        deleteNodeIds.forEach((id: string) => runCmd(new RemoveNodeCommand(engine.graph, id)))
+      }
+
+      const applyBatch = () => {
+        const batch = data?.batch
+        if (!batch) return
+        const move = batch.moveNodes
+        if (move && (move.ids || move.ids === '@selection') && typeof move.dx === 'number' && typeof move.dy === 'number') {
+          const ids = normalizeIds(move.ids, selectedNodeIds)
+          if (ids.length > 0) runCmd(new MoveNodesCommand(engine.graph, ids, move.dx, move.dy))
+        }
+        const updates: any[] = Array.isArray(batch.updateNodes) ? batch.updateNodes : []
+        updates.forEach(applyNodePatch)
+        const eUpdates: any[] = Array.isArray(batch.updateEdges) ? batch.updateEdges : []
+        eUpdates.forEach(applyEdgePatch)
+      }
+
+      if (history?.beginTransaction) {
+        history.beginTransaction('AI Update')
+        try {
+          nodes.forEach(applyNodePatch)
+          edges.forEach(applyEdgePatch)
+          applyBatch()
+          applyDeletes()
+          history.commitTransaction()
+        } catch {
+          try {
+            history.rollbackTransaction()
+          } catch {
+            // ignore
+          }
+          nodes.forEach(applyNodePatch)
+          edges.forEach(applyEdgePatch)
+          applyBatch()
+          applyDeletes()
+        }
+      } else {
+        nodes.forEach(applyNodePatch)
+        edges.forEach(applyEdgePatch)
+        applyBatch()
+        applyDeletes()
+        engine.graph.markDirty()
+      }
+
+      return {
+        applied: true,
+        mode: mode === 'delete' ? 'delete' : 'update',
+        nodes: nodes.length,
+        edges: edges.length,
+        deletedNodes: deleteNodeIds.length,
+        deletedEdges: deleteEdgeIds.length
+      }
+    }
+
+    if (data?.canvas) applyCanvasState(data.canvas)
+
+    const graph = engine.graph as any
+    const history = engine.history as any
+    const existingIds = new Set((engine.graph.getNodes() || []).map((n: any) => n.id))
+    const incomingIds = new Set(nodes.map((n: any) => n.id))
+    const validNodeIds = new Set([...existingIds, ...incomingIds])
+    const safeEdges = edges.filter((e: any) => validNodeIds.has(e.source) && validNodeIds.has(e.target))
+
+    const addNodes = () => {
+      nodes.forEach((n: any) => {
+        if (graph.getNode?.(n.id)) return
+        if (history?.execute) history.execute(new AddNodeCommand(engine.graph, n))
+        else graph.addNode(n)
+      })
+    }
+    const addEdges = () => {
+      safeEdges.forEach((e: any) => {
+        if (graph.getEdge?.(e.id)) return
+        if (history?.execute) history.execute(new AddEdgeCommand(engine.graph, e))
+        else graph.addEdge(e)
+      })
+    }
+
+    if (history?.beginTransaction) {
+      history.beginTransaction('AI Apply')
+      try {
+        addNodes()
+        addEdges()
+        history.commitTransaction()
+      } catch {
+        try {
+          history.rollbackTransaction()
+        } catch {
+          // ignore
+        }
+        addNodes()
+        addEdges()
+      }
+    } else {
+      addNodes()
+      addEdges()
+      engine.graph.markDirty()
+    }
+
+    return { applied: true, mode, nodes: nodes.length, edges: safeEdges.length }
+  }, [engine, applyCanvasState, selectedNodeIds, selectedEdgeIds])
 
   // 发送消息（流式）
   const handleSend = useCallback(async () => {
@@ -61,10 +467,10 @@ export const ChatTab: React.FC = () => {
     const chatHistory = currentMessages
       .filter((m: any) => !m.loading && !m.error && m.status !== 'pending' && m.status !== 'error')
       .map((m: any) => ({ role: m.role, content: m.content }))
-    
+
     // 添加用户消息
     addMessage({ role: 'user', content: userMessage })
-    
+
     // 添加助手消息（初始状态：等待中）
     addMessage({ role: 'assistant', content: '', status: 'pending' })
     setIsGenerating(true)
@@ -79,10 +485,10 @@ export const ChatTab: React.FC = () => {
         role: 'system',
         content: `${config.systemPrompt || '你是一个专业的图形编辑助手。'}\n\n${getCanvasContext()}`
       }
-      
+
       // 使用之前保存的历史，加上当前用户消息
       const allMessages = [systemMessage, ...chatHistory, { role: 'user', content: userMessage }]
-      
+
       await callAIServiceStream(config, allMessages, {
         onStart: () => {
           updateMessage(assistantMsgId, { status: 'thinking', content: '' })
@@ -95,6 +501,7 @@ export const ChatTab: React.FC = () => {
           })
         },
         onContent: (content) => {
+          latestAssistantContentRef.current = content
           updateMessage(assistantMsgId, { 
             status: 'streaming', 
             content,
@@ -103,6 +510,17 @@ export const ChatTab: React.FC = () => {
         },
         onDone: () => {
           updateMessage(assistantMsgId, { status: 'done', loading: false })
+          const currentMsg = useAIStore.getState().messages.find((m: any) => m.id === assistantMsgId)
+          const finalContent = latestAssistantContentRef.current || currentMsg?.content || ''
+          const payload = extractScenePayload(finalContent)
+          if (payload) {
+            const result = applyScenePayload(payload)
+            if (result.applied) {
+              updateMessage(assistantMsgId, {
+                content: `${finalContent}\n\n✅ 已应用到画布（${result.mode}）\n- 节点：${result.nodes}\n- 边：${result.edges}`
+              })
+            }
+          }
           // 自动保存会话
           setTimeout(() => saveCurrentSession(), 100)
         },
@@ -127,7 +545,7 @@ export const ChatTab: React.FC = () => {
     } finally {
       setIsGenerating(false)
     }
-  }, [input, isGenerating, config, addMessage, updateMessage, setIsGenerating, getCanvasContext, saveCurrentSession])
+  }, [input, isGenerating, addMessage, setIsGenerating, config, getCanvasContext, updateMessage, extractScenePayload, applyScenePayload, saveCurrentSession])
 
   // 回车发送
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -142,7 +560,7 @@ export const ChatTab: React.FC = () => {
     const date = new Date(timestamp)
     const now = new Date()
     const diff = now.getTime() - timestamp
-    
+
     if (diff < 60000) return '刚刚'
     if (diff < 3600000) return `${Math.floor(diff / 60000)}分钟前`
     if (diff < 86400000) return `${Math.floor(diff / 3600000)}小时前`
