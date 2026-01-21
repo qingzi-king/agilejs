@@ -215,6 +215,8 @@ export class ResizeRotatePlugin implements Plugin {
   private activeHandle: HandleType = HandleType.None;
   private hoveredHandle: HandleType = HandleType.None;
   private activeNodeId: string | null = null;
+  private _rafMarkDirty: number | null = null;
+  private _needsStructureDirtyDuringPreview = false;
   private startX = 0;
   private startY = 0;
   private startPosX = 0;
@@ -272,6 +274,32 @@ export class ResizeRotatePlugin implements Plugin {
     window.removeEventListener("touchmove", this.onTouchMove as any);
     window.removeEventListener("touchend", this.onTouchEnd as any);
     window.removeEventListener("touchcancel", this.onTouchEnd as any);
+
+    if (this._rafMarkDirty != null) {
+      cancelAnimationFrame(this._rafMarkDirty);
+      this._rafMarkDirty = null;
+    }
+  }
+
+  private requestMarkDirtyStructure(): void {
+    if (this._rafMarkDirty != null) return;
+    this._rafMarkDirty = requestAnimationFrame(() => {
+      this._rafMarkDirty = null;
+      this.engine.graph.markDirty("structure");
+    });
+  }
+
+  private markDirtyForPreview(): void {
+    if (this.engine.getEdgeSnapshotMode() === "off") {
+      this.engine.graph.markDirty("style");
+      return;
+    }
+    // 仅在存在未指定锚点（默认连节点中心）的相连边时，才需要结构级失效以触发边快照重建
+    if (this._needsStructureDirtyDuringPreview) {
+      this.requestMarkDirtyStructure();
+    } else {
+      this.engine.graph.markDirty("style");
+    }
   }
 
   // 为基础渲染器添加旋转支持
@@ -478,6 +506,16 @@ export class ResizeRotatePlugin implements Plugin {
           // 阻止事件传播，防止触发其他插件
           e.stopPropagation();
           e.preventDefault();
+
+          if (this.engine.getEdgeSnapshotMode() !== "off") {
+            const connected = this.engine.graph.connectedEdges(node.id);
+            this._needsStructureDirtyDuringPreview = connected.some(
+              (ed) => (ed.source === node.id && !ed.sourcePortId) || (ed.target === node.id && !ed.targetPortId),
+            );
+          } else {
+            this._needsStructureDirtyDuringPreview = false;
+          }
+
           // 通知引擎开始 resize（用于降质渲染优化）
           this.engine.setResizingNodes(true);
           // 事件：开始（旋转/缩放）
@@ -736,6 +774,7 @@ export class ResizeRotatePlugin implements Plugin {
       }
       // 正在拖动时的鼠标样式
       this.updateCursor(true);
+      this.markDirtyForPreview();
     }
   };
 
@@ -803,6 +842,11 @@ export class ResizeRotatePlugin implements Plugin {
   }
 
   private onMouseUp = () => {
+    if (this._rafMarkDirty != null) {
+      cancelAnimationFrame(this._rafMarkDirty);
+      this._rafMarkDirty = null;
+    }
+
     if (this.activeHandle !== HandleType.None && this.activeNodeId) {
       const node = this.engine.graph.getNode(this.activeNodeId);
       if (node) {
@@ -891,6 +935,7 @@ export class ResizeRotatePlugin implements Plugin {
     this.engine.setResizingNodes(false);
     this.activeHandle = HandleType.None;
     this.activeNodeId = null;
+    this._needsStructureDirtyDuringPreview = false;
     this.aspectLockAxis = null;
     this.hoveredHandle = HandleType.None;
     this.engine.canvas.style.cursor = "default";
@@ -940,6 +985,16 @@ export class ResizeRotatePlugin implements Plugin {
           }
           e.stopPropagation();
           e.preventDefault();
+
+          if (this.engine.getEdgeSnapshotMode() !== "off") {
+            const connected = this.engine.graph.connectedEdges(node.id);
+            this._needsStructureDirtyDuringPreview = connected.some(
+              (ed) => (ed.source === node.id && !ed.sourcePortId) || (ed.target === node.id && !ed.targetPortId),
+            );
+          } else {
+            this._needsStructureDirtyDuringPreview = false;
+          }
+
           // 通知引擎开始 resize（用于降质渲染优化）
           this.engine.setResizingNodes(true);
           if (this.activeHandle === HandleType.Rotate) {
@@ -1101,8 +1156,7 @@ export class ResizeRotatePlugin implements Plugin {
         });
       }
       this.updateCursor(true);
-      // 使用 'style' 模式避免触发边快照重建和四叉树重建（resize 预览期间的性能优化）
-      if (this.engine.graph) this.engine.graph.markDirty("style");
+      this.markDirtyForPreview();
     }
     e.preventDefault();
   };

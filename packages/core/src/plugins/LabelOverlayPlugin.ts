@@ -23,6 +23,7 @@ export class LabelOverlayPlugin implements Plugin {
   private offsetX = 0;
   private offsetY = 0;
   private isDragging = false; // 是否实际发生拖拽
+  private _rafMarkDirty: number | null = null;
   // 文本布局/宽度缓存（按字体、约束等关键参数区分），降低反复 measure 与分行成本
   private layoutCache = new Map<string, { lines: string[]; maxLineWidth: number; lineHeight: number }>();
   private widthCache = new Map<string, number>();
@@ -92,6 +93,29 @@ export class LabelOverlayPlugin implements Plugin {
     this.engine.canvas.removeEventListener("mousedown", this.onMouseDownCapture, true);
     window.removeEventListener("mousemove", this.onMouseMove);
     window.removeEventListener("mouseup", this.onMouseUp);
+
+    if (this._rafMarkDirty != null) {
+      cancelAnimationFrame(this._rafMarkDirty);
+      this._rafMarkDirty = null;
+    }
+  }
+
+  private requestMarkDirtyStructure(): void {
+    if (this._rafMarkDirty != null) return;
+    this._rafMarkDirty = requestAnimationFrame(() => {
+      this._rafMarkDirty = null;
+      this.engine.graph.markDirty("structure");
+    });
+  }
+
+  private markDirtyForPreview(): void {
+    // 边快照模式下，边几何的更新依赖 Graph 的结构版本（structureVersion）。
+    // 从 label 区域发起的拖拽不会经过 DragPlugin 的节流 markDirty，因此这里需要补齐。
+    if (this.engine.getEdgeSnapshotMode() === "off") {
+      this.engine.graph.markDirty("style");
+    } else {
+      this.requestMarkDirtyStructure();
+    }
   }
 
   renderEdgeLabels(ctx: CanvasRenderingContext2D): void {
@@ -530,10 +554,19 @@ export class LabelOverlayPlugin implements Plugin {
         n.position.y = pos.y + dy;
       }
     }
+
+    // 关键：拖拽预览时让边快照失效（未指定锚点时边端点依赖节点中心），确保实时更新
+    this.markDirtyForPreview();
   };
 
   private onMouseUp = () => {
     const EPS = 0.01;
+
+    if (this._rafMarkDirty != null) {
+      cancelAnimationFrame(this._rafMarkDirty);
+      this._rafMarkDirty = null;
+    }
+
     if (this.draggingNodeId && this.isDragging) {
       // 恢复原生 DPR
       this.engine.setDraggingNodes(false);
