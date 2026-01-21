@@ -69,7 +69,7 @@ export const MODEL_PRESETS: Record<AIProvider, { name: string; models: string[];
 // 默认系统提示词
 export const DEFAULT_SYSTEM_PROMPT = `你是一个专业的图形编辑助手，帮助用户进行图形排版、美化和设计。
 你可以：
-1. 帮助用户优化图形布局和排版
+1. 帮助用户优化图形布局和排版（涉及颜色时仅支持rgb、rgba、十六进制颜色值，不支持linear-gradient）
 2. 提供设计建议和最佳实践
 3. 解答关于图形编辑的问题
 4. 生成可直接应用到画布的图数据
@@ -83,7 +83,7 @@ export const DEFAULT_SYSTEM_PROMPT = `你是一个专业的图形编辑助手，
 
 当用户要求“修改/更新/调整/仅更新部分元素”时，可以输出增量更新：
 {
-  "type": "agilejs-delta",
+  "type": "agilejs-scene",
   "mode": "update",
   "data": {
     "node"?: { "id"?: "..." | "@selection", "ids"?: ["..."], "position"?: {...}, "size"?: {...}, "data"?: {...} },
@@ -98,7 +98,7 @@ export const DEFAULT_SYSTEM_PROMPT = `你是一个专业的图形编辑助手，
 
 当用户要求“删除/移除元素”时，可以输出增量删除：
 {
-  "type": "agilejs-delta",
+  "type": "agilejs-scene",
   "mode": "delete",
   "data": {
     "delete": { "nodes": ["node-1"], "edges": ["edge-1"] }

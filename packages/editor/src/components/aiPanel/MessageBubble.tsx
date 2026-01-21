@@ -17,6 +17,7 @@ export const MessageBubble: React.FC<{ message: ChatMessage }> = ({ message }) =
     }
     blocks.forEach((b) => {
       const body = b.body
+      // 检测 agilejs-scene
       if (body.includes('"type"') && body.includes('agilejs-scene')) {
         replaced = replaced.replace(b.raw, '（已生成画布数据，已自动应用）')
         return

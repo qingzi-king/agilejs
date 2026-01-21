@@ -129,110 +129,9 @@ export const ChatTab: React.FC = () => {
     }
   }, [engine])
 
-  const parseSceneFromDescription = useCallback((text: string) => {
-    if (!text) return null
-    const lines = text.split(/\n+/).map((l) => l.trim()).filter(Boolean)
-    const nodes: any[] = []
-    const edges: any[] = []
-
-    const shapeMap: Record<string, string> = {
-      圆角矩形: 'rect',
-      矩形: 'rect',
-      圆形: 'circle',
-      菱形: 'diamond',
-      椭圆: 'ellipse',
-      六边形: 'hexagon',
-      五边形: 'pentagon',
-      八边形: 'octagon',
-      星形: 'star',
-      三角形: 'triangle'
-    }
-
-    const edgeShapeMap: Record<string, string> = {
-      贝塞尔: 'edge-bezier',
-      贝塞尔曲线: 'edge-bezier',
-      直线: 'edge-straight',
-      正交: 'edge-orthogonal',
-      正交线: 'edge-orthogonal',
-      折线: 'edge-polyline'
-    }
-
-    const nodeRegex = /(.+?)\s*\(ID:\s*([^)]+)\)\s*-\s*位置\s*\(([-\d.]+)\s*,\s*([-\d.]+)\)\s*[，,]?\s*(?:尺寸\s*(\d+(?:\.\d+)?)\s*[×x]\s*(\d+(?:\.\d+)?)|直径\s*(\d+(?:\.\d+)?))(?:\s*[，,]\s*圆角半径\s*(\d+(?:\.\d+)?))?/i
-    const edgeRegex = /边\s*\d+\s*\(ID:\s*([^)]+)\)\s*-\s*从(.+?)\s*\(([^)]+)\)\s*到(.+?)\s*\(([^)]+)\)\s*的\s*([\u4e00-\u9fa5A-Za-z-]+)?/i
-
-    const hasBlueEdge = /蓝色|蓝色边|蓝色曲线|blue/i.test(text)
-    const defaultNodeStyle = { fill: '#e5e7eb', stroke: '#374151', lineWidth: 1 }
-    const defaultEdgeStyle = { stroke: hasBlueEdge ? '#3b82f6' : '#6b7280', lineWidth: 2 }
-
-    for (const line of lines) {
-      const nm = line.match(nodeRegex)
-      if (nm) {
-        const rawShape = nm[1].trim()
-        const id = String(nm[2]).trim()
-        const x = Number(nm[3])
-        const y = Number(nm[4])
-        const w = nm[5] ? Number(nm[5]) : Number(nm[7])
-        const h = nm[6] ? Number(nm[6]) : Number(nm[7])
-        const radius = nm[8] ? Number(nm[8]) : undefined
-        const shape = shapeMap[rawShape] || 'rect'
-        const style: any = { ...defaultNodeStyle }
-        if (rawShape.includes('圆角')) style.borderRadius = radius ?? 8
-        nodes.push({
-          id,
-          shape,
-          position: { x, y },
-          size: { width: w, height: h },
-          data: { label: rawShape, style }
-        })
-        continue
-      }
-      const em = line.match(edgeRegex)
-      if (em) {
-        const id = String(em[1]).trim()
-        const sourceId = String(em[3]).trim()
-        const targetId = String(em[5]).trim()
-        const kind = em[6]?.trim() || ''
-        const shape = edgeShapeMap[kind] || 'edge-bezier'
-        edges.push({ id, shape, source: sourceId, target: targetId, data: { style: defaultEdgeStyle } })
-      }
-    }
-
-    if (nodes.length === 0 && edges.length === 0) return null
-    return { type: 'agilejs-scene', mode: 'append', data: { nodes, edges } }
-  }, [])
-
-  const extractScenePayload = useCallback((text: string) => {
-    if (!text) return null
-    const blocks: string[] = []
-    const jsonBlock = /```json\s*([\s\S]*?)```/gi
-    const anyBlock = /```\s*([\s\S]*?)```/g
-    let m: RegExpExecArray | null
-    while ((m = jsonBlock.exec(text)) !== null) blocks.push(m[1])
-    if (blocks.length === 0) {
-      while ((m = anyBlock.exec(text)) !== null) blocks.push(m[1])
-    }
-    if (blocks.length === 0 && text.trim().startsWith('{') && text.trim().endsWith('}')) {
-      blocks.push(text.trim())
-    }
-    for (const raw of blocks) {
-      try {
-        const parsed = JSON.parse(raw)
-        const data = parsed?.data ?? parsed?.scene ?? parsed
-        const hasData = data?.nodes || data?.edges || data?.canvas || data?.node || data?.edge
-        const isTypeMatch = parsed?.type === 'agilejs-scene' || parsed?.type === 'agilejs-delta'
-        const isUpdateMode = parsed?.mode === 'update' || parsed?.update === true
-        if (isTypeMatch || isUpdateMode || hasData) {
-          return parsed
-        }
-      } catch {
-        // ignore parse errors
-      }
-    }
-    return parseSceneFromDescription(text)
-  }, [parseSceneFromDescription])
-
   const applyScenePayload = useCallback((payload: any) => {
     if (!engine || !payload) return { applied: false, reason: 'no-engine' }
+    if (payload?.type && payload?.type !== 'agilejs-scene') return { applied: false, reason: 'unsupported-type' }
     const data = payload?.data ?? payload?.scene ?? payload
     const mode = payload?.mode === 'replace' ? 'replace' : payload?.mode === 'delete' ? 'delete' : payload?.mode === 'update' ? 'update' : 'append'
     const nodes = Array.isArray(data?.nodes) ? data.nodes : data?.node ? [data.node] : []
@@ -253,7 +152,7 @@ export const ChatTab: React.FC = () => {
       return { applied: true, mode, nodes: nodes.length, edges: edges.length }
     }
 
-    if (mode === 'update' || mode === 'delete' || payload?.type === 'agilejs-delta' || payload?.update === true) {
+    if (mode === 'update' || mode === 'delete' || payload?.update === true) {
       const graph = engine.graph as any
       const history = engine.history as any
       const runCmd = (cmd: any) => (history?.execute ? history.execute(cmd) : cmd.do?.())
@@ -489,6 +388,9 @@ export const ChatTab: React.FC = () => {
       // 使用之前保存的历史，加上当前用户消息
       const allMessages = [systemMessage, ...chatHistory, { role: 'user', content: userMessage }]
 
+      // 用于追踪已应用的JSON片段（避免重复应用）
+      const appliedBlocks = new Set<string>()
+
       await callAIServiceStream(config, allMessages, {
         onStart: () => {
           updateMessage(assistantMsgId, { status: 'thinking', content: '' })
@@ -507,20 +409,37 @@ export const ChatTab: React.FC = () => {
             content,
             loading: false
           })
+          
+          // 实时检测并应用完整的JSON片段
+          const jsonBlock = /```json\s*([\s\S]*?)```/g
+          let match: RegExpExecArray | null
+          while ((match = jsonBlock.exec(content)) !== null) {
+            const blockContent = match[1]
+            const blockHash = blockContent.trim().slice(0, 100) // 使用前100字符作为唯一标识
+            
+            // 跳过已应用的片段
+            if (appliedBlocks.has(blockHash)) continue
+            
+            try {
+              const parsed = JSON.parse(blockContent)
+              if (parsed?.type && parsed?.type !== 'agilejs-scene') continue
+              const isValidType = parsed?.type === 'agilejs-scene'
+              const hasData = parsed?.data?.nodes || parsed?.data?.edges || parsed?.data?.canvas
+              
+              if (isValidType || hasData) {
+                const result = applyScenePayload(parsed)
+                if (result.applied) {
+                  appliedBlocks.add(blockHash)
+                  console.log(`✅ 实时应用 ${parsed?.type || 'scene'} - 节点:${result.nodes}, 边:${result.edges}`)
+                }
+              }
+            } catch {
+              // JSON未完整，等待下次内容更新
+            }
+          }
         },
         onDone: () => {
           updateMessage(assistantMsgId, { status: 'done', loading: false })
-          const currentMsg = useAIStore.getState().messages.find((m: any) => m.id === assistantMsgId)
-          const finalContent = latestAssistantContentRef.current || currentMsg?.content || ''
-          const payload = extractScenePayload(finalContent)
-          if (payload) {
-            const result = applyScenePayload(payload)
-            if (result.applied) {
-              updateMessage(assistantMsgId, {
-                content: `${finalContent}\n\n✅ 已应用到画布（${result.mode}）\n- 节点：${result.nodes}\n- 边：${result.edges}`
-              })
-            }
-          }
           // 自动保存会话
           setTimeout(() => saveCurrentSession(), 100)
         },
@@ -545,7 +464,7 @@ export const ChatTab: React.FC = () => {
     } finally {
       setIsGenerating(false)
     }
-  }, [input, isGenerating, addMessage, setIsGenerating, config, getCanvasContext, updateMessage, extractScenePayload, applyScenePayload, saveCurrentSession])
+  }, [input, isGenerating, addMessage, setIsGenerating, config, getCanvasContext, updateMessage, applyScenePayload, saveCurrentSession])
 
   // 回车发送
   const handleKeyDown = (e: React.KeyboardEvent) => {
