@@ -1,6 +1,6 @@
 {
   "name": "@fnt-agilejs/core",
-  "version": "1.0.0-rc.3",
+  "version": "1.0.0-rc.4",
   "description": "一个轻量级、零依赖的 Canvas 可视化引擎",
   "type": "module",
   "engines": {
