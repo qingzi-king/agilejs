@@ -2,7 +2,7 @@
  * @Description: 调试工具
  * @Author: qingzi.wang
  * @Date: 2025-10-17 15:57:28
- * @LastEditTime: 2026-01-14 18:40:29
+ * @LastEditTime: 2026-01-22 12:19:49
  */
 import React from 'react'
 import Tooltip from '@/components/common/Tooltip'
@@ -136,6 +136,34 @@ const DebugAction: React.FC<IProps> = ({ engine }) => {
       message.error('JSON 解析失败，请检查数据')
     }
   }
+  // 获取可见边数据
+  const handleGetVisibleEdges = () => {
+    if (!engine) return
+    const data = engine.getVisibleEdges();
+    console.log('可视范围边数据:', data);
+    message.success(`已打印到控制台，共涉及 ${data.length} 条边`)
+  }
+  // 获取可见节点数据
+  const handleGetVisibleNodes = () => {
+    if (!engine) return
+    const data = engine.getVisibleNodes();
+    console.log('可视范围节点数据:', data);
+    message.success(`已打印到控制台，共涉及 ${data.length} 条节点`)
+  }
+  // 获取可视范围数据
+  const handleGetViewRectWorld = () => {
+    if (!engine) return
+    const data = engine.getViewRectWorld();
+    console.log('可视范围数据:', data);
+    message.success(`已打印到控制台`)
+  }
+  // 获取性能数据
+  const handleGetPerformanceStats = () => {
+    if (!engine) return
+    const data = engine.getPerformanceStats();
+    console.log('性能数据:', data);
+    message.success(`已打印到控制台`)
+  }
   return (
     <>
       <Tooltip content="辅助调试">
@@ -146,42 +174,93 @@ const DebugAction: React.FC<IProps> = ({ engine }) => {
           <img src={debugSvg} alt="辅助" className="w-5 h-5 dark:invert" />
         </div>
       </Tooltip>
-      <Modal visible={modalVisible} title={'辅助调试'} onClose={() => setModalVisible(false)} width={640}>
-        <div className="bottom-2.5 left-2.5 z-5 flex flex-wrap gap-2">
-          <button
-            onClick={() => setFpsEnabled((v) => !v)}
-            className={`px-2 py-1 text-xs rounded hover:cursor-pointer transition-colors ${
-              fpsEnabled
-                ? 'bg-rose-600 text-white hover:bg-rose-700'
-                : 'bg-slate-700 text-white hover:bg-slate-800'
-            }`}
-          >
-            FPS显示：{fpsEnabled ? '开' : '关'}
-          </button>
-          <button
-            onClick={handlePrintHistory}
-            className="px-2 py-1 text-xs bg-indigo-600 text-white rounded hover:bg-indigo-700 hover:cursor-pointer transition-colors"
-          >
-            打印历史栈
-          </button>
-          <button
-            onClick={handleNodeAnim}
-            className="px-2 py-1 text-xs bg-purple-500 text-white rounded hover:bg-purple-600 hover:cursor-pointer transition-colors"
-          >
-            N1节点动画(移动+缩放+层级)
-          </button>
-          <button
-            onClick={handleLoad}
-            className="px-2 py-1 text-xs bg-green-500 text-white rounded hover:bg-green-600 hover:cursor-pointer transition-colors"
-          >
-            加载JSON(示例重置)
-          </button>
-          <button
-            onClick={handleSave}
-            className="px-2 py-1 text-xs bg-blue-500 text-white rounded hover:bg-blue-600 hover:cursor-pointer transition-colors"
-          >
-            保存JSON
-          </button>
+      <Modal visible={modalVisible} title={'辅助调试'} onClose={() => setModalVisible(false)} width={680}>
+        <div className="space-y-4">
+          {/* 性能监控 */}
+          <div>
+            <div className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">性能监控</div>
+            <div className="flex flex-wrap gap-2">
+              <button
+                onClick={() => setFpsEnabled((v) => !v)}
+                className={`px-3 py-1.5 text-sm rounded hover:cursor-pointer transition-colors ${
+                  fpsEnabled
+                    ? 'bg-rose-600 text-white hover:bg-rose-700'
+                    : 'bg-slate-700 text-white hover:bg-slate-800'
+                }`}
+              >
+                FPS显示：{fpsEnabled ? '开' : '关'}
+              </button>
+              <button
+                onClick={handleGetPerformanceStats}
+                className="px-3 py-1.5 text-sm bg-emerald-500 text-white rounded hover:bg-emerald-600 hover:cursor-pointer transition-colors"
+              >
+                获取性能数据
+              </button>
+            </div>
+          </div>
+
+          {/* 可视范围查询 */}
+          <div>
+            <div className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">可视范围查询</div>
+            <div className="flex flex-wrap gap-2">
+              <button
+                onClick={handleGetVisibleNodes}
+                className="px-3 py-1.5 text-sm bg-cyan-500 text-white rounded hover:bg-cyan-600 hover:cursor-pointer transition-colors"
+              >
+                获取可视节点
+              </button>
+              <button
+                onClick={handleGetVisibleEdges}
+                className="px-3 py-1.5 text-sm bg-teal-500 text-white rounded hover:bg-teal-600 hover:cursor-pointer transition-colors"
+              >
+                获取可视边
+              </button>
+              <button
+                onClick={handleGetViewRectWorld}
+                className="px-3 py-1.5 text-sm bg-amber-500 text-white rounded hover:bg-amber-600 hover:cursor-pointer transition-colors"
+              >
+                获取视口范围
+              </button>
+            </div>
+          </div>
+
+          {/* 数据管理 */}
+          <div>
+            <div className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">数据管理</div>
+            <div className="flex flex-wrap gap-2">
+              <button
+                onClick={handleSave}
+                className="px-3 py-1.5 text-sm bg-blue-500 text-white rounded hover:bg-blue-600 hover:cursor-pointer transition-colors"
+              >
+                保存JSON
+              </button>
+              <button
+                onClick={handleLoad}
+                className="px-3 py-1.5 text-sm bg-green-500 text-white rounded hover:bg-green-600 hover:cursor-pointer transition-colors"
+              >
+                加载JSON
+              </button>
+            </div>
+          </div>
+
+          {/* 调试与测试 */}
+          <div>
+            <div className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">调试与测试</div>
+            <div className="flex flex-wrap gap-2">
+              <button
+                onClick={handlePrintHistory}
+                className="px-3 py-1.5 text-sm bg-indigo-600 text-white rounded hover:bg-indigo-700 hover:cursor-pointer transition-colors"
+              >
+                打印历史栈
+              </button>
+              <button
+                onClick={handleNodeAnim}
+                className="px-3 py-1.5 text-sm bg-purple-500 text-white rounded hover:bg-purple-600 hover:cursor-pointer transition-colors"
+              >
+                N1节点动画
+              </button>
+            </div>
+          </div>
         </div>
       </Modal>
     </>

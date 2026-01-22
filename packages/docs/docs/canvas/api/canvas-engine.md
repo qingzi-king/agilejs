@@ -277,6 +277,45 @@ engine.fitView({ selectionOnly: true });
 engine.fitView({ minScale: 0.5, maxScale: 2 });
 ```
 
+### getViewRectWorld()
+```typescript
+getViewRectWorld(): ViewRectWorld
+```
+获取当前视口在世界坐标系下的矩形范围。
+
+**返回值：**
+```typescript
+interface ViewRectWorld {
+  x: number;      // 左上角 X 坐标（世界坐标）
+  y: number;      // 左上角 Y 坐标（世界坐标）
+  width: number;  // 宽度（世界坐标）
+  height: number; // 高度（世界坐标）
+}
+```
+
+**用途：**
+- 可视区域裁剪判断
+- 调试与统计
+- 自定义渲染逻辑
+
+```typescript
+const viewRect = engine.getViewRectWorld();
+console.log('视口范围:', viewRect);
+// { x: -100, y: -50, width: 800, height: 600 }
+
+// 判断节点是否在视口内
+const node = engine.graph.getNode('node-1');
+if (node) {
+  const inView = (
+    node.position.x + node.size.width >= viewRect.x &&
+    node.position.x <= viewRect.x + viewRect.width &&
+    node.position.y + node.size.height >= viewRect.y &&
+    node.position.y <= viewRect.y + viewRect.height
+  );
+  console.log('节点在视口内:', inView);
+}
+```
+
 ## 坐标转换
 
 ### toScreen()
@@ -298,6 +337,83 @@ toWorld(screen: { x: number; y: number }): { x: number; y: number }
 ```typescript
 const worldPos = engine.toWorld({ x: clientX, y: clientY });
 ```
+
+## 可视范围查询
+
+### getVisibleNodes()
+```typescript
+getVisibleNodes(opts?: { useCache?: boolean }): NodeData[]
+```
+获取当前可视范围内的节点列表（按 `graph.getNodes()` 的稳定顺序返回）。
+
+**参数：**
+- `opts.useCache`: 是否使用缓存（默认 `true`）。设置为 `false` 会强制重新计算
+
+**返回值：**
+- 可视节点数组（已过滤不可见节点 `visible: false`）
+
+**特性：**
+- 自动使用空间索引（Quadtree）加速查询（如果已启用）
+- 支持视口缓存复用（当视口未变化且图形版本一致时）
+- 尊重节点的 `visible` 属性
+
+```typescript
+// 获取可视节点（使用缓存）
+const visibleNodes = engine.getVisibleNodes();
+console.log('可视节点数量:', visibleNodes.length);
+
+// 强制重新计算（不使用缓存）
+const freshNodes = engine.getVisibleNodes({ useCache: false });
+
+// 遍历可视节点
+visibleNodes.forEach(node => {
+  console.log('节点:', node.id, node.position);
+});
+
+// 统计可视节点类型
+const nodeTypes = visibleNodes.reduce((acc, node) => {
+  acc[node.shape] = (acc[node.shape] || 0) + 1;
+  return acc;
+}, {} as Record<string, number>);
+console.log('节点类型分布:', nodeTypes);
+```
+
+### getVisibleEdges()
+```typescript
+getVisibleEdges(): EdgeData[]
+```
+获取当前可视范围内的边列表（通过近似相交判断）。
+
+**返回值：**
+- 可视边数组
+
+**判定逻辑：**
+- 基于边的 source 和 target 节点中心点的包围盒与视口相交判断
+- 近似算法，性能优先（适用于大规模场景）
+
+```typescript
+// 获取可视边
+const visibleEdges = engine.getVisibleEdges();
+console.log('可视边数量:', visibleEdges.length);
+
+// 遍历可视边
+visibleEdges.forEach(edge => {
+  const source = engine.graph.getNode(edge.source);
+  const target = engine.graph.getNode(edge.target);
+  console.log('边:', edge.id, source?.id, '->', target?.id);
+});
+
+// 筛选特定类型的可视边
+const polylineEdges = visibleEdges.filter(e => e.shape === 'edge-polyline');
+console.log('折线边数量:', polylineEdges.length);
+```
+
+**使用场景：**
+- 性能统计与监控
+- 可视元素分析
+- 自定义渲染优化
+- 数据导出（仅导出可见内容）
+- 调试与诊断
 
 ## 交互配置
 
@@ -484,6 +600,95 @@ engine.setEdgeSnapshotMode('off');
 engine.setEdgeSnapshotMode('always');
 ```
 
+### enablePerformanceMonitor()
+```typescript
+enablePerformanceMonitor(enabled: boolean): void
+```
+启用或禁用性能监控。
+
+```typescript
+// 启用性能监控
+engine.enablePerformanceMonitor(true);
+
+// 禁用性能监控
+engine.enablePerformanceMonitor(false);
+```
+
+### getPerformanceStats()
+```typescript
+getPerformanceStats(): PerformanceStats
+```
+获取当前性能统计数据。
+
+**返回值：**
+```typescript
+interface PerformanceStats {
+  fps: number;                // 当前帧率
+  renderTime: number;         // 平均渲染时间（毫秒）
+  nodeCount: number;          // 节点总数
+  edgeCount: number;          // 边总数
+  visibleNodeCount: number;   // 可视节点数量
+  visibleEdgeCount: number;   // 可视边数量
+  memoryUsage?: number;       // 内存使用（MB，仅 Chrome）
+  dpr?: number;               // 当前设备像素比
+  canvasPixels?: number;      // 实际渲染像素数量
+  cssSize?: {                 // CSS 尺寸
+    width: number;
+    height: number;
+  };
+}
+```
+
+**特性：**
+- 自动计算可视节点/边数量（使用高效的缓存机制）
+- 包含 FPS 和渲染时间统计
+- 提供内存使用情况（Chrome 浏览器）
+- 显示画布渲染参数（DPR、像素数量）
+
+```typescript
+// 启用性能监控
+engine.enablePerformanceMonitor(true);
+
+// 获取性能数据
+const stats = engine.getPerformanceStats();
+console.log('性能统计:', stats);
+// {
+//   fps: 60,
+//   renderTime: 2.5,
+//   nodeCount: 1000,
+//   edgeCount: 1500,
+//   visibleNodeCount: 45,
+//   visibleEdgeCount: 67,
+//   memoryUsage: 125.5,
+//   dpr: 2,
+//   canvasPixels: 3840000,
+//   cssSize: { width: 1200, height: 800 }
+// }
+
+// 监控性能并在低 FPS 时发出警告
+setInterval(() => {
+  const stats = engine.getPerformanceStats();
+  if (stats.fps < 30) {
+    console.warn('低帧率警告:', stats.fps);
+  }
+  if (stats.renderTime > 16) {
+    console.warn('渲染时间过长:', stats.renderTime, 'ms');
+  }
+}, 1000);
+
+// 性能面板示例
+function updatePerformancePanel() {
+  const stats = engine.getPerformanceStats();
+  document.getElementById('fps').textContent = stats.fps.toString();
+  document.getElementById('nodes').textContent = 
+    `${stats.visibleNodeCount}/${stats.nodeCount}`;
+  document.getElementById('edges').textContent = 
+    `${stats.visibleEdgeCount}/${stats.edgeCount}`;
+  document.getElementById('memory').textContent = 
+    stats.memoryUsage ? `${stats.memoryUsage.toFixed(1)} MB` : 'N/A';
+}
+```
+
 ## 历史调试
 
 ### getHistoryData()
@@ -518,7 +723,7 @@ engine.resize(1200, 800);
 
 引擎会触发以下事件：
 
-### engine:tick
+### `engine:tick`
 ```typescript
 { time: number }
 ```
@@ -530,7 +735,7 @@ engine.events.on('engine:tick', ({ time }) => {
 });
 ```
 
-### engine:resize
+### `engine:resize`
 ```typescript
 { width: number; height: number }
 ```
@@ -542,7 +747,7 @@ engine.events.on('engine:resize', ({ width, height }) => {
 });
 ```
 
-### graph:change
+### `graph:change`
 ```typescript
 { reason: string }
 ```
@@ -554,7 +759,7 @@ engine.events.on('graph:change', ({ reason }) => {
 });
 ```
 
-### engine:theme-change
+### `engine:theme-change`
 ```typescript
 { theme: string }
 ```
@@ -636,6 +841,22 @@ engine.setInteractionConfig({
 ### 性能监控
 
 ```typescript
+// 方式 1：使用内置性能监控器（推荐）
+engine.enablePerformanceMonitor(true);
+
+setInterval(() => {
+  const stats = engine.getPerformanceStats();
+  console.log('FPS:', stats.fps);
+  console.log('渲染时间:', stats.renderTime, 'ms');
+  console.log('可视节点:', stats.visibleNodeCount, '/', stats.nodeCount);
+  console.log('可视边:', stats.visibleEdgeCount, '/', stats.edgeCount);
+  
+  if (stats.fps < 30) {
+    console.warn('低帧率警告，考虑优化');
+  }
+}, 1000);
+
+// 方式 2：手动统计帧率
 let frameCount = 0;
 let lastTime = performance.now();
 
@@ -646,10 +867,6 @@ engine.events.on('engine:tick', ({ time }) => {
   if (elapsed >= 1000) {
     const fps = frameCount / (elapsed / 1000);
     console.log('FPS:', fps.toFixed(2));
-    
-    if (fps < 30) {
-      console.warn('Low FPS detected, consider optimizations');
-    }
     
     frameCount = 0;
     lastTime = time;

@@ -2,7 +2,7 @@
  * @Description:
  * @Author: qingzi.wang
  * @Date: 2025-10-14 12:26:16
- * @LastEditTime: 2026-01-21 16:46:30
+ * @LastEditTime: 2026-01-22 12:25:06
  */
 import React from 'react'
 import { createPortal } from 'react-dom'
@@ -26,7 +26,7 @@ const Modal: React.FC<ModalProps> = ({ visible, title, onClose, width = 560, chi
         style={{ width, maxWidth: '90vw', maxHeight: '84vh', display: 'flex', flexDirection: 'column' }}
       >
         <div className="px-3 py-2 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
-          <div className="font-medium text-sm">{title}</div>
+          <div className="font-medium text-md">{title}</div>
           <button
             type="button"
             className="top-2 right-2 text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 text-xl cursor-pointer"

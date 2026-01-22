@@ -166,6 +166,13 @@ export interface EngineOptions {
   dprDegradation?: DprDegradationConfig;
 }
 
+export interface ViewRectWorld {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
 export class CanvasEngine {
   static readonly defaultTheme: CoreThemeName = "light";
   readonly canvas: HTMLCanvasElement;
@@ -1114,6 +1121,51 @@ export class CanvasEngine {
   getTranslation(): { x: number; y: number } {
     return { x: this.translateX, y: this.translateY };
   }
+
+  /**
+   * 获取当前视口在世界坐标系下的矩形范围（用于可视裁剪、调试统计等）
+   */
+  getViewRectWorld(): ViewRectWorld {
+    const invScale = 1 / this.scale;
+    const viewMinX = -this.translateX * invScale;
+    const viewMinY = -this.translateY * invScale;
+    const viewMaxX = viewMinX + this._cssWidth * invScale;
+    const viewMaxY = viewMinY + this._cssHeight * invScale;
+    return { x: viewMinX, y: viewMinY, width: viewMaxX - viewMinX, height: viewMaxY - viewMinY };
+  }
+
+  /**
+   * 获取当前可视范围内的节点列表（按 graph.getNodes() 的稳定顺序返回）
+   * - 默认仅在缓存与当前视口/版本一致时复用缓存，否则会实时计算
+   */
+  getVisibleNodes(opts: { useCache?: boolean } = {}): import("../model/Graph").NodeData[] {
+    const useCache = opts.useCache !== false;
+    if (useCache && this.isVisibleNodeCacheValid()) {
+      return this._visibleNodesCache.slice();
+    }
+    return this.computeVisibleNodes().slice();
+  }
+
+  /**
+   * 获取当前可视范围内的边列表（通过 edgeIntersectsView 做近似相交判断）
+   */
+  getVisibleEdges(): import("../model/Graph").EdgeData[] {
+    const view = this.getViewRectWorld();
+    const viewMinX = view.x;
+    const viewMinY = view.y;
+    const viewMaxX = view.x + view.width;
+    const viewMaxY = view.y + view.height;
+
+    const out: import("../model/Graph").EdgeData[] = [];
+    const edges = this.graph.getEdges();
+    for (let i = 0; i < edges.length; i++) {
+      const e = edges[i]!;
+      if (!this.edgeIntersectsView(e, viewMinX, viewMinY, viewMaxX, viewMaxY)) continue;
+      out.push(e);
+    }
+    return out;
+  }
+
   setScale(next: number): void {
     this.scale = Math.max(this.interactionConfig.minScale, Math.min(this.interactionConfig.maxScale, next));
   }
@@ -1462,6 +1514,63 @@ export class CanvasEngine {
       padding: this.spatialPadding,
     });
     this.qtVersion = gv;
+  }
+
+  private isVisibleNodeCacheValid(): boolean {
+    return (
+      this._visibleNodesCache.length > 0 &&
+      this._lastRenderVersion === this.graph.getRenderVersion() &&
+      this._lastRenderScale === this.scale &&
+      this._lastRenderTranslateX === this.translateX &&
+      this._lastRenderTranslateY === this.translateY
+    );
+  }
+
+  private computeVisibleNodes(): import("../model/Graph").NodeData[] {
+    const view = this.getViewRectWorld();
+    const viewMinX = view.x;
+    const viewMinY = view.y;
+    const viewMaxX = view.x + view.width;
+    const viewMaxY = view.y + view.height;
+    const viewRect = view;
+
+    const canUseSpatial = this.spatialEnabled && !(this.spatialDisableDuringDrag && this.isDraggingNodes);
+    if (canUseSpatial) this.rebuildSpatialIndexIfNeeded();
+    else this.qt = null;
+
+    const out: import("../model/Graph").NodeData[] = [];
+
+    // 复用内部缓存结构（Set/数组）减少频繁调用时的分配，但不直接暴露内部数组引用
+    this._visibleNodeIds.clear();
+    if (canUseSpatial && this.qt) {
+      this._qtResultCache.length = 0;
+      this.qt.query(viewRect, this._qtResultCache);
+
+      if (this._qtResultCache.length > 0) {
+        for (let i = 0; i < this._qtResultCache.length; i++) {
+          this._visibleNodeIds.add(this._qtResultCache[i]!.data.id);
+        }
+        const all = this.graph.getNodes();
+        for (let i = 0; i < all.length; i++) {
+          const n = all[i]!;
+          if (n.visible === false) continue;
+          if (this._visibleNodeIds.has(n.id)) out.push(n);
+        }
+      }
+      return out;
+    }
+
+    const all = this.graph.getNodes();
+    for (let i = 0; i < all.length; i++) {
+      const n = all[i]!;
+      if (n.visible === false) continue;
+      const l = n.position.x;
+      const t = n.position.y;
+      const r = l + n.size.width;
+      const b = t + n.size.height;
+      if (!(r < viewMinX || b < viewMinY || l > viewMaxX || t > viewMaxY)) out.push(n);
+    }
+    return out;
   }
 
   // 判断一条边的近似包围盒是否与视口相交（避免每帧生成闭包）
