@@ -3,6 +3,7 @@ dist
 mock
 examples
 .vscode
+.github
 .DS_Store
 .idea
 .nvmrc
