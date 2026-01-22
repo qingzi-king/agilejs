@@ -67,6 +67,24 @@ export const ChatTab: React.FC = () => {
 
     const nodes = engine.graph.getNodes()
     const edges = engine.graph.getEdges()
+
+    // 获取可视区域内的节点和边
+    let visibleInfo = ''
+    try {
+      const visibleNodes = (engine as any).getVisibleNodes?.() || []
+      const visibleEdges = (engine as any).getVisibleEdges?.() || []
+      const visibleNodeIds = visibleNodes.map((n: any) => n.id)
+      const visibleEdgeIds = visibleEdges.map((e: any) => e.id)
+      visibleInfo = `\n当前可视区域内：节点 ${visibleNodeIds.length} 个 [${visibleNodeIds.join(', ')}]，边 ${visibleEdgeIds.length} 条 [${visibleEdgeIds.join(', ')}]`
+    } catch {
+      visibleInfo = ''
+    }
+
+    // 获取已选中的节点和边ID
+    const selectedInfo = selectedNodeIds.length > 0 || selectedEdgeIds.length > 0
+      ? `\n已选中元素：节点 [${selectedNodeIds.join(', ')}]，边 [${selectedEdgeIds.join(', ')}]`
+      : ''
+
     const selectionSummary = `当前选中：${selectionKind}（节点 ${selectedNodeIds.length}，边 ${selectedEdgeIds.length}）`
     let sceneJson = ''
     try {
@@ -79,8 +97,8 @@ export const ChatTab: React.FC = () => {
     }
 
     const serialized = sceneJson ? `\n当前画布序列化(JSON)：${sceneJson}` : ''
-    return `当前画布包含 ${nodes.length} 个节点和 ${edges.length} 条边。${selectionSummary}${serialized}`
-  }, [engine, selectedNodeIds.length, selectedEdgeIds.length, selectionKind])
+    return `当前画布包含 ${nodes.length} 个节点和 ${edges.length} 条边。${selectionSummary}${selectedInfo}${visibleInfo}${serialized}`
+  }, [engine, selectedNodeIds, selectedEdgeIds, selectionKind])
 
   const applyCanvasState = useCallback((canvas: any) => {
     if (!engine || !canvas) return
