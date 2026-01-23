@@ -148,6 +148,37 @@ export const MessageBubble: React.FC<{ message: ChatMessage }> = ({ message }) =
     )
   }
 
+  // 终止状态 - 保留已输出的内容
+  if (message.status === 'interrupted') {
+    return (
+      <div className="flex flex-col gap-1">
+        {message.content && (
+          <div className="flex justify-start">
+            <div className="w-full rounded-lg px-3 py-2 bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-100 text-sm">
+              <MarkdownRenderer content={getDisplayContent(message.content)} />
+            </div>
+          </div>
+        )}
+        <div className="flex justify-start">
+          <div className="w-full rounded-lg px-3 py-2 bg-amber-50 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 text-sm">
+            <div className="flex items-start gap-2">
+              <span className="text-base">
+                <svg viewBox="0 0 1024 1024" version="1.1" width="32" height="32">
+                  <path d="M512 0c282.794667 0 512 229.205333 512 512s-229.205333 512-512 512S0 794.794667 0 512 229.205333 0 512 0z" fill="#E84A27" fill-opacity=".1"></path>
+                  <path d="M512 298.666667c117.76 0 213.333333 95.573333 213.333333 213.333333s-95.573333 213.333333-213.333333 213.333333-213.333333-95.573333-213.333333-213.333333 95.573333-213.333333 213.333333-213.333333m0-42.666667c-141.952 0-256 114.048-256 256s114.048 256 256 256 256-114.048 256-256-114.048-256-256-256z m41.813333 341.333333h-83.626666c-23.509333 0-43.52-20.010667-43.52-43.52v-83.626666c0-23.509333 20.010667-43.52 43.52-43.52h83.626666c23.509333 0 43.52 20.010667 43.52 43.52v83.626666c0 24.704-18.816 43.52-43.52 43.52z" fill="#FF5630"></path>
+                </svg>
+              </span>
+              <div>
+                <div className="font-medium">已终止</div>
+                <div className="text-xs mt-0.5 opacity-80">本次生成已被手动终止</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
   // 完成状态或普通消息
   return (
     <div className="flex flex-col gap-1">

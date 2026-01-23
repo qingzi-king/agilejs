@@ -36,6 +36,12 @@ export const ChatTab: React.FC = () => {
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const latestAssistantContentRef = useRef<string>('')
+  const abortControllerRef = useRef<AbortController | null>(null)
+  const activeAssistantMsgIdRef = useRef<string | null>(null)
+  // 用于避免“终止后仍继续写入 UI/应用 JSON”或“旧请求回调覆盖新状态”
+  const requestSeqRef = useRef(0)
+  const activeRequestIdRef = useRef<number | null>(null)
+  const abortedRequestIdRef = useRef<number | null>(null)
 
   // 滚动到底部
   const scrollToBottom = useCallback(() => {
@@ -99,6 +105,24 @@ export const ChatTab: React.FC = () => {
     const serialized = sceneJson ? `\n当前画布序列化(JSON)：${sceneJson}` : ''
     return `当前画布包含 ${nodes.length} 个节点和 ${edges.length} 条边。${selectionSummary}${selectedInfo}${visibleInfo}${serialized}`
   }, [engine, selectedNodeIds, selectedEdgeIds, selectionKind])
+
+  // 终止 AI 生成
+  const handleAbort = useCallback(() => {
+    // 标记当前请求已终止：屏蔽后续增量写入，但仍允许 onError 将消息置为 interrupted
+    abortedRequestIdRef.current = activeRequestIdRef.current
+
+    // UI 立即响应：将当前 assistant 消息标记为 interrupted（不等待网络回调）
+    const msgId = activeAssistantMsgIdRef.current
+    if (msgId) {
+      updateMessage(msgId, { status: 'interrupted', loading: false })
+    }
+
+    if (abortControllerRef.current) {
+      abortControllerRef.current?.abort()
+      abortControllerRef.current = null
+    }
+    setIsGenerating(false)
+  }, [setIsGenerating, updateMessage])
 
   const applyCanvasState = useCallback((canvas: any) => {
     if (!engine || !canvas) return
@@ -392,9 +416,18 @@ export const ChatTab: React.FC = () => {
     addMessage({ role: 'assistant', content: '', status: 'pending' })
     setIsGenerating(true)
 
+    // 创建新的 AbortController
+    const requestId = ++requestSeqRef.current
+    activeRequestIdRef.current = requestId
+    abortedRequestIdRef.current = null
+    latestAssistantContentRef.current = ''
+    abortControllerRef.current = new AbortController()
+    const localController = abortControllerRef.current
+
     // 获取刚添加的助手消息ID
     const assistantMessages = useAIStore.getState().messages
     const assistantMsgId = assistantMessages[assistantMessages.length - 1]?.id
+    activeAssistantMsgIdRef.current = assistantMsgId || null
 
     try {
       // 构建消息历史（使用配置的系统提示词）
@@ -410,10 +443,15 @@ export const ChatTab: React.FC = () => {
       const appliedBlocks = new Set<string>()
 
       await callAIServiceStream(config, allMessages, {
+        signal: localController?.signal,
         onStart: () => {
+          if (activeRequestIdRef.current !== requestId) return
+          if (abortedRequestIdRef.current === requestId || localController?.signal?.aborted) return
           updateMessage(assistantMsgId, { status: 'thinking', content: '' })
         },
         onThinking: (thinkingContent) => {
+          if (activeRequestIdRef.current !== requestId) return
+          if (abortedRequestIdRef.current === requestId || localController?.signal?.aborted) return
           updateMessage(assistantMsgId, { 
             status: 'thinking', 
             thinkingContent,
@@ -421,6 +459,8 @@ export const ChatTab: React.FC = () => {
           })
         },
         onContent: (content) => {
+          if (activeRequestIdRef.current !== requestId) return
+          if (abortedRequestIdRef.current === requestId || localController?.signal?.aborted) return
           latestAssistantContentRef.current = content
           updateMessage(assistantMsgId, { 
             status: 'streaming', 
@@ -445,6 +485,9 @@ export const ChatTab: React.FC = () => {
               const hasData = parsed?.data?.nodes || parsed?.data?.edges || parsed?.data?.canvas
               
               if (isValidType || hasData) {
+                // 终止或失效后不再应用任何画布变更
+                if (activeRequestIdRef.current !== requestId) continue
+                if (abortedRequestIdRef.current === requestId || localController?.signal?.aborted) continue
                 const result = applyScenePayload(parsed)
                 if (result.applied) {
                   appliedBlocks.add(blockHash)
@@ -457,30 +500,55 @@ export const ChatTab: React.FC = () => {
           }
         },
         onDone: () => {
+          if (activeRequestIdRef.current !== requestId) return
+          abortControllerRef.current = null
+          activeRequestIdRef.current = null
+          abortedRequestIdRef.current = null
+          activeAssistantMsgIdRef.current = null
           updateMessage(assistantMsgId, { status: 'done', loading: false })
           // 自动保存会话
           setTimeout(() => saveCurrentSession(), 100)
         },
         onError: (error) => {
-          updateMessage(assistantMsgId, { 
-            status: 'error', 
-            error,
-            loading: false
-          })
+          if (activeRequestIdRef.current !== requestId) return
+          // 注意：这里要先标记请求结束，避免 onError 后仍被后续回调写入
+          activeRequestIdRef.current = null
+          abortedRequestIdRef.current = null
+          activeAssistantMsgIdRef.current = null
+          // 终止请求时不显示错误
+          if ((error as any)?.name === 'AbortError') {
+            updateMessage(assistantMsgId, { status: 'interrupted', loading: false })
+          } else {
+            updateMessage(assistantMsgId, { 
+              status: 'error', 
+              error: typeof error === 'string' ? error : (error as any)?.message,
+              loading: false
+            })
+          }
         }
       })
     } catch (error: any) {
+      // Abort 已在 onError 内部处理，这里避免再次覆盖状态
+      if (error?.name === 'AbortError') return
+
       // 网络中断时保留已输出的内容，只更新状态和错误信息
       const currentMsg = useAIStore.getState().messages.find((m: any) => m.id === assistantMsgId)
-      updateMessage(assistantMsgId, { 
+      updateMessage(assistantMsgId, {
         status: 'error',
-        error: error.message || '网络中断，请重试',
+        error: error?.message || '网络中断，请重试',
         loading: false,
         // 保留已有的内容，不清空
         content: currentMsg?.content || ''
       })
     } finally {
+      // 仅当仍是当前请求时才清理，避免未来扩展（并发/队列）时互相覆盖
+      if (activeRequestIdRef.current === requestId) {
+        activeRequestIdRef.current = null
+        abortedRequestIdRef.current = null
+        activeAssistantMsgIdRef.current = null
+      }
       setIsGenerating(false)
+      abortControllerRef.current = null
     }
   }, [input, isGenerating, addMessage, setIsGenerating, config, getCanvasContext, updateMessage, applyScenePayload, saveCurrentSession])
 
@@ -628,6 +696,14 @@ export const ChatTab: React.FC = () => {
             >
               清空对话
             </button>
+            {isGenerating && (
+              <button
+                className="h-9 px-4 rounded-lg text-sm font-medium bg-red-600 hover:bg-red-700 text-white cursor-pointer transition-colors"
+                onClick={handleAbort}
+              >
+                终止
+              </button>
+            )}
             <button
               className={`h-9 px-4 rounded-lg text-sm font-medium transition-colors ${
                 isGenerating || !input.trim()

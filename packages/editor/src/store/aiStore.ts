@@ -7,7 +7,7 @@ import { create } from 'zustand'
 import { persist, createJSONStorage } from 'zustand/middleware'
 
 // 支持的AI模型提供商
-export type AIProvider = 'deepseek' | 'openai' | 'anthropic' | 'custom'
+export type AIProvider = 'deepseek' | 'openai' | 'anthropic' | 'qianwen' | 'custom'
 
 // AI模型配置
 export interface AIModelConfig {
@@ -29,7 +29,7 @@ export interface ChatMessage {
   loading?: boolean
   error?: string
   // 流式输出相关状态
-  status?: 'pending' | 'thinking' | 'streaming' | 'done' | 'error'
+  status?: 'pending' | 'thinking' | 'streaming' | 'done' | 'interrupted' | 'error'
   thinkingContent?: string // 思考过程内容（如DeepSeek的reasoning_content）
 }
 
@@ -48,6 +48,11 @@ export const MODEL_PRESETS: Record<AIProvider, { name: string; models: string[];
     name: 'DeepSeek',
     models: ['deepseek-chat', 'deepseek-coder', 'deepseek-reasoner'],
     defaultEndpoint: 'https://api.deepseek.com/v1'
+  },
+  qianwen: {
+    name: 'Qianwen',
+    models: ['qwen-plus', 'qwen-long', 'qwen-long-latest', 'qwq-plus', 'qwen-turbo', 'qwen-flash'],
+    defaultEndpoint: 'https://dashscope.aliyuncs.com/compatible-mode/v1'
   },
   openai: {
     name: 'OpenAI',

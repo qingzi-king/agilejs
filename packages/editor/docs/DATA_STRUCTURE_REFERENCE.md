@@ -302,28 +302,28 @@ interface NodeData {
   shape: string;                   // 形状类型（见下方形状列表）
   position: Point;                 // 世界坐标位置 { x, y }
   size: Size;                      // 尺寸 { width, height }
-  
+
   // ===== 可选基础属性 =====
   visible?: boolean;               // 是否可见（默认 true）
   selectable?: boolean;            // 是否可选中（默认 true）
   draggable?: boolean;             // 是否可拖拽（默认 true）
   resizable?: boolean;             // 是否可调节尺寸（默认 true）
   rotatable?: boolean;             // 是否可旋转（默认 true）
-  
+
   // ===== 变换属性 =====
   rotation?: number;               // 旋转角度（弧度，范围 0-2π）
   zIndex?: number;                 // 层级（数字越大越靠前，默认 0）
   selected?: boolean;              // 是否当前被选中（默认 false）
-  
+
   // ===== 组织属性（容器/分组） =====
   parentId?: string;               // 父节点 ID（容器）
   isContainer?: boolean;           // 是否为容器节点（容器可包裹子节点）
   groupId?: string;                // 直接所属组 ID（最内层组，向后兼容）
   groupPath?: string[];            // 完整组路径（从外到内，支持嵌套）
-  
+
   // ===== 锚点（连接点）=====
   ports?: PortData[];              // 锚点列表
-  
+
   // ===== 自定义数据 =====
   data?: NodeCustomData;           // 自定义数据（样式、标签、动画等）
 }
@@ -334,7 +334,6 @@ interface NodeCustomData extends Record<string, unknown> {
   label?: string;                  // 节点标签文本（通常显示在节点周围，可配置位置/样式）
   text?: string;                   // 节点内部主文本（优先使用，显示在节点内部中心）
   showPorts?: boolean;             // 是否显示锚点（默认 true）
-
   // ===== 图片 / SVG =====
   image?: {
     src: string;                   // 图片 URL 或 base64
@@ -350,7 +349,6 @@ interface NodeCustomData extends Record<string, unknown> {
     viewBox?: { x: number; y: number; width: number; height: number };
     fit?: 'stretch' | 'contain' | 'cover';
   };
-  
   // ===== 样式 =====
   style?: {
     fill?: string;                 // 填充色（十六进制如 '#4CAF50'）
@@ -383,7 +381,6 @@ interface NodeCustomData extends Record<string, unknown> {
       [key: string]: any;            // 其他形状特定样式
     }
   };
-  
   // ===== 文本样式 =====
   textStyle?: {
     fontSize?: number;             // 字体大小
@@ -393,7 +390,6 @@ interface NodeCustomData extends Record<string, unknown> {
     textBaseline?: 'top' | 'middle' | 'bottom';
     [key: string]: any;
   };
-  
   // ===== 动画 =====
   blink?: {                        // 闪烁动画
     enabled: boolean;              // 是否启用
@@ -401,7 +397,6 @@ interface NodeCustomData extends Record<string, unknown> {
     min: number;                   // 最小透明度（0-1）
     max: number;                   // 最大透明度（0-1）
   };
-  
   // ===== 业务数据 =====
   custom?: Record<string, any>;    // 完全自定义的业务数据
   
@@ -584,7 +579,12 @@ const containerNode: NodeData = {
       fill: 'rgba(255,255,255,0.6)',
       stroke: '#94a3b8',
       lineWidth: 1,
-      borderRadius: 8
+      borderRadius: 8,
+      label: {
+        position: "bottom",
+        textBaseline: "top",
+        background: "#f1f5f9"
+      }
     }
   }
 };
@@ -596,7 +596,16 @@ const childNode: NodeData = {
   size: { width: 140, height: 80 },
   parentId: 'container-1',
   groupPath: ['group-A', 'group-A-1'],
-  data: { label: '容器内子节点' }
+  data: {
+    label: '容器内子节点',
+    style: {
+      label: {
+        position: "bottom",
+        textBaseline: "top",
+        background: "#f1f5f9"
+      }
+    }
+  }
 };
 ```
 ```
@@ -790,7 +799,7 @@ const businessNode: NodeData = {
   position: { x: 100, y: 100 },
   size: { width: 120, height: 80 },
   data: {
-    label: '订单处理',
+    text: '订单处理',
     style: { fill: '#2196F3' }
   }
 };
@@ -802,7 +811,7 @@ const orgNode: NodeData = {
   position: { x: 100, y: 100 },
   size: { width: 120, height: 80 },
   data: {
-    label: '技术部',
+    text: '技术部',
     style: { fill: '#4CAF50' }
   }
 };
@@ -814,7 +823,7 @@ const mlNode: NodeData = {
   position: { x: 100, y: 100 },
   size: { width: 120, height: 80 },
   data: {
-    label: 'Model V2',
+    text: 'Model V2',
     style: { fill: '#FF9800' }
   }
 };
@@ -883,7 +892,7 @@ const mlNode: NodeData = {
       "position": { "x": 100, "y": 100 },
       "size": { "width": 120, "height": 80 },
       "data": {
-        "label": "开始",
+        "text": "开始",
         "style": {
           "fill": "#4CAF50",
           "stroke": "#2E7D32",
@@ -897,7 +906,7 @@ const mlNode: NodeData = {
       "position": { "x": 100, "y": 250 },
       "size": { "width": 120, "height": 80 },
       "data": {
-        "label": "处理",
+        "text": "处理",
         "style": {
           "fill": "#2196F3",
           "stroke": "#1565C0",
@@ -911,7 +920,7 @@ const mlNode: NodeData = {
       "position": { "x": 100, "y": 400 },
       "size": { "width": 120, "height": 80 },
       "data": {
-        "label": "结束",
+        "text": "结束",
         "style": {
           "fill": "#F44336",
           "stroke": "#C62828",
@@ -1425,6 +1434,7 @@ interface PerformanceOptimizations {
 
 **其他**
 - 美化与重新排版时，不要新增节点和边
+- 在排版场景中，如果涉及容器节点，其内部的子节点视为一个整体
 - 颜色仅支持16进制、rgb、rgba，不支持渐变色
 - 边的label仅支持纯文本字符串，不支持对象结构数据（不同于节点的label可支持样式配置）
 - **节点文本区分**：

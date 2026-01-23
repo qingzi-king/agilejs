@@ -2,11 +2,12 @@ import { AIProvider } from '@/store/aiStore'
 import { MODEL_PRESETS } from '@/store/aiStore'
 
 export interface StreamCallbacks {
+  signal?: AbortSignal
   onStart?: () => void
   onThinking?: (content: string) => void
   onContent?: (content: string) => void
   onDone?: () => void
-  onError?: (error: string) => void
+  onError?: (error: Error | string) => void
 }
 
 export async function callAIServiceStream(
@@ -15,23 +16,38 @@ export async function callAIServiceStream(
   callbacks: StreamCallbacks
 ): Promise<void> {
   const { provider, apiKey, apiEndpoint, model, temperature = 0.7, maxTokens = 4096 } = config
+  const { signal } = callbacks
   
   if (!apiKey) {
     throw new Error('请先配置 API Key')
   }
 
+  const makeAbortError = () => {
+    const err = new Error('请求已终止')
+    ;(err as any).name = 'AbortError'
+    return err
+  }
+
+  // 检查是否已被终止
+  if (signal?.aborted) {
+    callbacks.onError?.(makeAbortError())
+    return
+  }
+
   const endpoint = apiEndpoint || MODEL_PRESETS[provider].defaultEndpoint
   callbacks.onStart?.()
 
-  if (provider === 'anthropic') {
-    // Anthropic 流式 API
-    const response = await fetch(`${endpoint}/messages`, {
+  try {
+    if (provider === 'anthropic') {
+      // Anthropic 流式 API
+      const response = await fetch(`${endpoint}/messages`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'x-api-key': apiKey,
         'anthropic-version': '2023-06-01'
       },
+      signal,
       body: JSON.stringify({
         model,
         max_tokens: maxTokens,
@@ -56,6 +72,14 @@ export async function callAIServiceStream(
     if (!reader) throw new Error('无法读取响应流')
 
     while (true) {
+      if (signal?.aborted) {
+        try {
+          await reader.cancel()
+        } catch {
+          // ignore
+        }
+        throw makeAbortError()
+      }
       const { done, value } = await reader.read()
       if (done) break
 
@@ -81,21 +105,22 @@ export async function callAIServiceStream(
     }
     callbacks.onDone?.()
   } else {
-    // OpenAI 兼容格式 (OpenAI, DeepSeek, 自定义) 流式
-    const response = await fetch(`${endpoint}/chat/completions`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${apiKey}`
-      },
-      body: JSON.stringify({
-        model,
-        messages,
-        temperature,
-        max_tokens: maxTokens,
-        stream: true
+      // OpenAI 兼容格式 (OpenAI, DeepSeek, 自定义) 流式
+      const response = await fetch(`${endpoint}/chat/completions`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${apiKey}`
+        },
+        signal,
+        body: JSON.stringify({
+          model,
+          messages,
+          temperature,
+          max_tokens: maxTokens,
+          stream: true
+        })
       })
-    })
 
     if (!response.ok) {
       const error = await response.json().catch(() => ({}))
@@ -111,6 +136,14 @@ export async function callAIServiceStream(
     if (!reader) throw new Error('无法读取响应流')
 
     while (true) {
+      if (signal?.aborted) {
+        try {
+          await reader.cancel()
+        } catch {
+          // ignore
+        }
+        throw makeAbortError()
+      }
       const { done, value } = await reader.read()
       if (done) break
 
@@ -152,5 +185,8 @@ export async function callAIServiceStream(
       }
     }
     callbacks.onDone?.()
+  }
+  } catch (err: any) {
+    callbacks.onError?.(err instanceof Error ? err : String(err))
   }
 }
