@@ -26,7 +26,7 @@ import { MessageBubble } from './MessageBubble'
 export const ChatTab: React.FC = () => {
   const { 
     config, messages, isGenerating, sessions, currentSessionId,
-    addMessage, updateMessage, clearMessages, setIsGenerating,
+    addMessage, updateMessage, setIsGenerating,
     newSession, saveCurrentSession, loadSession, deleteSession
   } = useAIStore()
   const engine = useCanvasStore((state) => state.engine)
@@ -578,8 +578,8 @@ export const ChatTab: React.FC = () => {
       {/* 历史会话面板 */}
       {showHistory && (
         <div className="absolute inset-0 z-20 bg-white dark:bg-gray-800 flex flex-col">
-          <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 dark:border-gray-700">
-            <span className="font-medium text-gray-800 dark:text-gray-100">历史会话</span>
+          <div className="flex items-center justify-between px-4 py-1 border-b border-gray-200 dark:border-gray-700">
+            <span className="text-sm text-gray-800 dark:text-gray-100">历史会话</span>
             <button
               className="w-8 h-8 flex items-center justify-center rounded hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer transition-colors"
               onClick={() => setShowHistory(false)}
@@ -672,50 +672,44 @@ export const ChatTab: React.FC = () => {
       </div>
 
       {/* 输入区域 */}
-      <div className="border-t border-gray-200 dark:border-gray-700 p-3">
-        <div className="flex items-end gap-2">
+      <div className="border-gray-200 dark:border-gray-700 p-3">
+        <div className="relative">
           <textarea
             ref={textareaRef}
-            className="flex-1 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-3 py-2 text-sm text-gray-800 dark:text-gray-100 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 overflow-y-auto"
-            style={{ minHeight: '36px', maxHeight: '76px' }}
-            placeholder="输入消息..."
-            rows={2}
+            className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 pl-3 pr-12 py-2 text-sm text-gray-800 dark:text-gray-100 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 overflow-y-auto resize-none"
+            style={{ minHeight: '30px', maxHeight: '120px' }}
+            placeholder="输入消息，Shift + Enter 换行"
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
             disabled={isGenerating}
           />
-        </div>
-        <div className="flex justify-between items-center mt-2">
-          <span className="text-xs text-gray-400">Shift + Enter 换行</span>
-          <span className="flex gap-2">
+          {isGenerating ? (
             <button
-              className="text-xs text-gray-400 hover:text-red-500 transition-colors"
-              onClick={clearMessages}
-              disabled={isGenerating || messages.length === 0}
+              className="absolute right-1.5 bottom-3 h-8 w-8 flex items-center justify-center rounded-lg bg-red-600 hover:bg-red-700 text-white cursor-pointer transition-colors"
+              onClick={handleAbort}
+              title="终止"
             >
-              清空对话
+              <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                <rect x="6" y="6" width="12" height="12" rx="1" />
+              </svg>
             </button>
-            {isGenerating && (
-              <button
-                className="h-9 px-4 rounded-lg text-sm font-medium bg-red-600 hover:bg-red-700 text-white cursor-pointer transition-colors"
-                onClick={handleAbort}
-              >
-                终止
-              </button>
-            )}
+          ) : (
             <button
-              className={`h-9 px-4 rounded-lg text-sm font-medium transition-colors ${
-                isGenerating || !input.trim()
-                  ? 'bg-gray-200 dark:bg-gray-700 text-gray-400 cursor-not-allowed'
+              className={`absolute right-1.5 bottom-3 h-8 w-8 flex items-center justify-center rounded-lg transition-colors ${
+                !input.trim()
+                  ? 'bg-gray-200 dark:bg-gray-600 text-gray-400 cursor-not-allowed'
                   : 'bg-blue-600 hover:bg-blue-700 text-white cursor-pointer'
               }`}
               onClick={handleSend}
-              disabled={isGenerating || !input.trim()}
+              disabled={!input.trim()}
+              title="发送"
             >
-              发送
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+              </svg>
             </button>
-          </span>
+          )}
         </div>
       </div>
     </div>

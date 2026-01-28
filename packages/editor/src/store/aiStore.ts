@@ -46,7 +46,7 @@ export interface ChatSession {
 export const MODEL_PRESETS: Record<AIProvider, { name: string; models: string[]; defaultEndpoint: string }> = {
   deepseek: {
     name: 'DeepSeek',
-    models: ['deepseek-chat', 'deepseek-coder', 'deepseek-reasoner'],
+    models: ['deepseek-chat', 'deepseek-reasoner'],
     defaultEndpoint: 'https://api.deepseek.com/v1'
   },
   qianwen: {
